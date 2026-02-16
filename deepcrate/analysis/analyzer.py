@@ -98,11 +98,18 @@ def analyze_track(path: Path) -> Track:
     musical_key = detect_key(y, sr)
     energy = detect_energy(y, sr)
 
+    title = metadata.get("title", "").strip()
+    artist = metadata.get("artist", "").strip()
+
+    # Fall back to filename when embedded tags are missing.
+    if not title:
+        title = path.stem
+
     return Track(
         file_path=str(path),
         file_hash=fhash,
-        title=metadata.get("title", ""),
-        artist=metadata.get("artist", ""),
+        title=title,
+        artist=artist,
         bpm=bpm,
         musical_key=musical_key,
         energy_level=energy,
