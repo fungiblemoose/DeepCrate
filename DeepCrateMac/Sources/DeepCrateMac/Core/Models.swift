@@ -79,11 +79,14 @@ struct SetSummary: Identifiable, Hashable {
 struct SetTrackRow: Identifiable, Hashable {
     let id: Int
     var position: Int
+    var trackID: Int
     var artist: String
     var title: String
     var bpm: Double
     var key: String
     var energy: Double
+    var filePath: String
+    var previewStart: Double
     var transition: String
 }
 

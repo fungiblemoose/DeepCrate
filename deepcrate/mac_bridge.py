@@ -162,11 +162,14 @@ def cmd_set_tracks(args: argparse.Namespace) -> None:
             "rows": [
                 {
                     "position": st.position,
+                    "track_id": t.id,
                     "artist": artist_for(t),
                     "title": title_for(t),
                     "bpm": t.bpm,
                     "musical_key": t.musical_key,
                     "energy_level": t.energy_level,
+                    "file_path": t.file_path,
+                    "preview_start": t.preview_start,
                     "transition": transition,
                 }
                 for st, t, transition in rows

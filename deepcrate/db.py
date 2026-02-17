@@ -391,7 +391,7 @@ def get_set_by_name(name: str) -> SetPlan | None:
 def get_all_sets() -> list[SetPlan]:
     conn = get_connection()
     try:
-        rows = conn.execute("SELECT * FROM sets ORDER BY name").fetchall()
+        rows = conn.execute("SELECT * FROM sets ORDER BY id DESC").fetchall()
         return [SetPlan(**dict(r)) for r in rows]
     finally:
         conn.close()
