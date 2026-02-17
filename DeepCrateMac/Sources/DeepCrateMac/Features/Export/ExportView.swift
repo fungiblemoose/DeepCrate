@@ -46,7 +46,7 @@ struct ExportView: View {
     private func refreshSets() async {
         do {
             let sets = try await Task.detached {
-                try BackendClient().sets()
+                try LocalDatabase.shared.listSets()
             }.value
             appState.setSummaries = sets
             if selectedSetID == nil {

@@ -204,23 +204,12 @@ struct PlanView: View {
             return
         }
 
-        do {
-            try await Task.detached {
-                try BackendClient().plan(description: localDescription, name: localName, duration: localDuration)
-            }.value
-            appState.statusMessage = "Created set \(localName)"
-            inlineMessageIsError = false
-            if let preflightWarning {
-                inlineMessage = "Created set \(localName). Note: \(preflightWarning)"
-            } else {
-                inlineMessage = "Created set \(localName)"
-            }
-            await refreshSets()
-        } catch {
-            appState.statusMessage = "Planning failed: \(error.localizedDescription)"
-            inlineMessageIsError = true
-            inlineMessage = "Planning failed: \(error.localizedDescription)"
-        }
+        await planWithOpenAI(
+            description: localDescription,
+            name: localName,
+            duration: localDuration,
+            preflightWarning: preflightWarning
+        )
     }
 
     private func planWithAppleModel(
@@ -240,7 +229,7 @@ struct PlanView: View {
             }
 
             try await Task.detached {
-                try BackendClient().saveSet(
+                try LocalDatabase.shared.saveSet(
                     name: name,
                     description: description,
                     duration: duration,
@@ -262,10 +251,56 @@ struct PlanView: View {
         }
     }
 
+    private func planWithOpenAI(
+        description: String,
+        name: String,
+        duration: Int,
+        preflightWarning: String?
+    ) async {
+        do {
+            let tracks = try await ensureLibraryTracks()
+            let key = resolvedOpenAIKey()
+            let model = resolvedOpenAIModel()
+            let planner = OpenAISetPlanner()
+            let ids = try await planner.planTrackIDs(
+                description: description,
+                durationMinutes: duration,
+                tracks: tracks,
+                apiKey: key,
+                model: model
+            )
+            if ids.isEmpty {
+                appState.statusMessage = "OpenAI planner returned no tracks."
+                return
+            }
+
+            try await Task.detached {
+                try LocalDatabase.shared.saveSet(
+                    name: name,
+                    description: description,
+                    duration: duration,
+                    trackIDs: ids
+                )
+            }.value
+            appState.statusMessage = "Created set \(name) with OpenAI"
+            inlineMessageIsError = false
+            if let preflightWarning {
+                inlineMessage = "Created set \(name). Note: \(preflightWarning)"
+            } else {
+                inlineMessage = "Created set \(name)"
+            }
+            await refreshSets()
+        } catch {
+            appState.statusMessage = "OpenAI planning failed: \(error.localizedDescription)"
+            inlineMessageIsError = true
+            inlineMessage = "OpenAI planning failed: \(error.localizedDescription)"
+        }
+    }
+
     private func refreshSets() async {
         do {
             let sets = try await Task.detached {
-                try BackendClient().sets()
+                try LocalDatabase.shared.listSets()
             }.value
             appState.setSummaries = sets
         } catch {
@@ -278,10 +313,41 @@ struct PlanView: View {
             return appState.libraryTracks
         }
         let tracks = try await Task.detached {
-            try BackendClient().tracks(query: "", bpm: "", key: "", energy: "")
+            try LocalDatabase.shared.loadTracks()
         }.value
         appState.libraryTracks = tracks
         return tracks
+    }
+
+    private func resolvedOpenAIKey() -> String {
+        let fromSettings = settings.openAIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !fromSettings.isEmpty {
+            return fromSettings
+        }
+        return envValue("OPENAI_API_KEY") ?? ""
+    }
+
+    private func resolvedOpenAIModel() -> String {
+        let fromSettings = settings.openAIModel.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !fromSettings.isEmpty {
+            return fromSettings
+        }
+        return envValue("OPENAI_MODEL") ?? "gpt-4o-mini"
+    }
+
+    private func envValue(_ key: String) -> String? {
+        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).deletingLastPathComponent()
+        let envURL = root.appendingPathComponent(".env")
+        guard let content = try? String(contentsOf: envURL, encoding: .utf8) else { return nil }
+        for line in content.split(separator: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || trimmed.hasPrefix("#") { continue }
+            let parts = trimmed.split(separator: "=", maxSplits: 1).map(String.init)
+            if parts.count == 2 && parts[0].trimmingCharacters(in: .whitespacesAndNewlines) == key {
+                return parts[1].trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        return nil
     }
 
     private var normalizedDescription: String {
