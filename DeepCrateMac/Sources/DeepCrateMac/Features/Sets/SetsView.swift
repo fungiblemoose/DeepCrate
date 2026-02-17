@@ -91,7 +91,7 @@ struct SetsView: View {
     private func refreshSets() async {
         do {
             let sets = try await Task.detached {
-                try BackendClient().sets()
+                try LocalDatabase.shared.listSets()
             }.value
             appState.setSummaries = sets
             if selectedSetID == nil {
@@ -108,7 +108,7 @@ struct SetsView: View {
         let name = selectedSet.name
         do {
             let loadedRows = try await Task.detached {
-                try BackendClient().setTracks(name: name)
+                try LocalDatabase.shared.setTrackRows(name: name)
             }.value
             previewPlayer.stopPreview(clearSelection: true)
             rows = loadedRows

@@ -261,6 +261,56 @@ struct LocalApplePlanner {
         )
     }
 
+    func fallbackPlanTrackIDs(description: String, durationMinutes: Int, tracks: [Track]) -> [Int] {
+        let profiles = inferGenreProfiles(from: description)
+        let filtered = filterTracks(tracks, profiles: profiles)
+        return fallbackSelection(
+            durationMinutes: durationMinutes,
+            tracks: filtered,
+            description: description,
+            profiles: profiles
+        )
+    }
+
+    func normalizePlannedIDs(
+        _ ids: [Int],
+        description: String,
+        durationMinutes: Int,
+        tracks: [Track]
+    ) -> [Int] {
+        let targetCount = targetTrackCount(durationMinutes: durationMinutes)
+        let profiles = inferGenreProfiles(from: description)
+        let filtered = filterTracks(tracks, profiles: profiles)
+        let fallback = fallbackSelection(
+            durationMinutes: durationMinutes,
+            tracks: filtered,
+            description: description,
+            profiles: profiles
+        )
+        let trackLookup = Dictionary(uniqueKeysWithValues: filtered.map { ($0.id, $0) })
+
+        var valid: [Int] = []
+        for id in ids where trackLookup[id] != nil {
+            if !valid.contains(id) {
+                valid.append(id)
+            }
+        }
+        for fallbackID in fallback where !valid.contains(fallbackID) {
+            valid.append(fallbackID)
+            if valid.count >= targetCount {
+                break
+            }
+        }
+
+        let reordered = reorderForFlow(
+            ids: valid,
+            lookup: trackLookup,
+            description: description,
+            profiles: profiles
+        )
+        return Array(reordered.prefix(targetCount))
+    }
+
     func planTrackIDs(description: String, durationMinutes: Int, tracks: [Track]) async throws -> [Int] {
         let targetCount = targetTrackCount(durationMinutes: durationMinutes)
         let profiles = inferGenreProfiles(from: description)

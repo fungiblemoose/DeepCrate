@@ -83,7 +83,7 @@ struct GapsView: View {
     private func refreshSets() async {
         do {
             let sets = try await Task.detached {
-                try BackendClient().sets()
+                try LocalDatabase.shared.listSets()
             }.value
             appState.setSummaries = sets
             if selectedSetID == nil {
@@ -103,7 +103,7 @@ struct GapsView: View {
 
         do {
             let gaps = try await Task.detached {
-                try BackendClient().gaps(name: name)
+                try LocalDatabase.shared.analyzeGaps(name: name)
             }.value
             appState.gapSuggestions = gaps
             selectedGapID = gaps.first?.id
