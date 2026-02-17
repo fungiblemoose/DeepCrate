@@ -1,206 +1,123 @@
 # DeepCrate
 
-AI-powered DJ set builder. Analyze your music library, plan sets with natural language, score transitions using harmonic mixing principles, and export to Rekordbox or M3U.
+DeepCrate is a Swift-native macOS app for DJs. It scans your library, analyzes BPM/key/energy, builds sets from natural language prompts, explains transition quality, highlights weak gaps, and exports playlists.
 
-## Features
+## Status
 
-- **Library Analysis** — Scan audio files, extract BPM, musical key (Camelot notation), and energy levels using librosa and chromagrams
-- **AI Set Planning** — Describe your set in natural language; OpenAI plans the tracklist using your library
-- **Intelligent Scoring** — Evaluate transitions using harmonic mixing (Camelot wheel), BPM compatibility, and energy flow
-- **Gap Analysis** — Identify weak transitions and suggest bridge tracks to fill them
-- **Spotify Discovery** — Search Spotify to fill gaps in your library
-- **Multi-Format Export** — Export to M3U (standard) or Rekordbox XML (professional DJ software)
+- Primary product: **Swift app** in `DeepCrateMac/`
+- Current backend: **Python bridge** (`deepcrate/mac_bridge.py`) for analysis/planning/discovery/export/database
+- Legacy Python GUI: kept for compatibility, no longer the primary UI
 
-## Quick Start
+## What Works Today
 
-### Installation
+- Native macOS SwiftUI interface with liquid-glass styling
+- Library scan + analysis queue
+- Track preview playback in Library and Sets pages
+- Per-track and bulk reanalysis
+- Manual metadata overrides and review queue
+- AI set planning (cloud OpenAI or local Apple Foundation Model fallback)
+- DJ-jargon-aware planning (`dnb`, `ukg`, `rollers`, `hardbass`, `afrohouse`, `tropical house`, etc.)
+- Gap analysis with severity and plain-language guidance
+- Export to M3U/Rekordbox XML
+
+## Quick Start (Swift App)
+
+### Requirements
+
+- macOS 14+
+- Xcode Command Line Tools
+- Python 3.12 (for current backend bridge)
+
+### Setup
 
 ```bash
 git clone https://github.com/fungiblemoose/DeepCrate.git
 cd DeepCrate
-pip install -e .
+python3 -m venv .venv
+.venv/bin/pip install -e .
+cp .env.example .env
 ```
 
-**Requirements:** Python 3.12+
-
-### Setup
-
-1. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Add your API keys (all optional, but required for their respective features):
-   ```
-   OPENAI_API_KEY=sk-...          # For plan command (required)
-   OPENAI_MODEL=gpt-4o-mini        # Default is fine, or use gpt-4o
-   SPOTIFY_CLIENT_ID=...           # For discover command
-   SPOTIFY_CLIENT_SECRET=...       # For discover command
-   ```
-
-3. Get your keys:
-   - **OpenAI:** https://platform.openai.com/account/api-keys
-   - **Spotify:** https://developer.spotify.com/dashboard
-
-### Analyze Your Library
-
-```bash
-deepcrate scan ~/Music
-```
-
-This recursively finds all audio files, analyzes them (BPM, key, energy), and stores them in SQLite. Skips unchanged files on re-runs.
-
-Supported formats: MP3, WAV, FLAC, M4A, OGG, and more (anything librosa handles).
-
-### Plan a Set
-
-```bash
-deepcrate plan "uplifting techno set, 120 BPM, around 45 minutes" \
-  --name "Friday Night" \
-  --duration 45
-```
-
-The AI reads your library description and creates a tracklist with smooth transitions. Results are saved to the database.
-
-### View Your Set
-
-```bash
-deepcrate show "Friday Night"
-```
-
-Displays the full tracklist with transition scores (0–1). A score of 1.0 is perfect; <0.5 is weak.
-
-```
-Track 1: Artist - Song [BPM 120, Key 8A] → Track 2
-         BPM match: 0.95 | Key match: 1.0 | Energy: 0.92 | Overall: 0.95
-```
-
-### Find Weak Transitions
-
-```bash
-deepcrate gaps "Friday Night"
-```
-
-Analyzes all transitions and flags gaps (scores < 0.5) with suggestions for what kind of track would fit.
-
-### Fill Gaps with Spotify
-
-```bash
-deepcrate discover --name "Friday Night" --gap 3
-```
-
-Searches Spotify for tracks that match the gap suggestions and adds them to the database.
-
-## All Commands
-
-| Command | Purpose |
-|---------|---------|
-| `deepcrate scan <directory>` | Analyze audio files in a folder and add to library |
-| `deepcrate stats` | Show library overview (count, BPM range, key distribution) |
-| `deepcrate search [--bpm MIN-MAX] [--key KEY] [--energy LEVEL] [-q TEXT]` | Filter and search your library |
-| `deepcrate plan <description> --name NAME [--duration MINUTES]` | Create a DJ set using AI |
-| `deepcrate show <set-name>` | Display a set with transition scores |
-| `deepcrate gaps <set-name>` | Find weak transitions and gap suggestions |
-| `deepcrate discover --name SET_NAME --gap GAP_NUMBER` | Search Spotify to fill a gap |
-| `deepcrate export <set-name> --format [m3u\|rekordbox]` | Export set to file |
-
-## How It Works
-
-### Audio Analysis
-
-Each track is analyzed for:
-- **BPM** — Beat tracking via librosa's onset detection
-- **Key** — Chromagram + Krumhansl-Kessler pitch class profiles, mapped to Camelot notation
-- **Energy** — Combination of RMS amplitude and spectral centroid
-
-### Transition Scoring
-
-Transitions are scored (0–1) based on:
-- **Key compatibility** (40%) — Uses the Camelot harmonic mixing wheel. Adjacent keys score high; clashing keys score low.
-- **BPM matching** (35%) — Penalties for large tempo changes, with tolerance for half-tempo detection
-- **Energy flow** (25%) — Gradual energy changes score higher than sudden jumps
-
-### AI Planning
-
-1. The AI receives your library context (track names, artists, BPM, keys)
-2. You describe the set in natural language
-3. OpenAI plans a tracklist as JSON
-4. The tool validates and stores the set, then calculates transition scores
-
-### Database
-
-Four SQLite tables:
-- **tracks** — Metadata from analysis (path, BPM, key, energy, duration)
-- **sets** — Your planned sets (name, description, target duration)
-- **set_tracks** — Tracks in each set, plus transition scores
-- **gaps** — Gap analysis results and suggestions
-
-## Configuration
-
-All settings via `.env`:
+Set keys in `.env` as needed:
 
 ```env
-# OpenAI
 OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4o-mini
-
-# Spotify (optional)
 SPOTIFY_CLIENT_ID=...
 SPOTIFY_CLIENT_SECRET=...
-
-# Database (optional)
 DATABASE_PATH=data/deepcrate.sqlite
 ```
 
-## Development
-
-### Running Tests
+### Run
 
 ```bash
-pytest tests/ -v
+cd DeepCrateMac
+swift run
 ```
 
-21 tests cover Camelot wheel logic, transition scoring, and audio analysis. No audio files or API keys required.
+### Build
 
-### Project Structure
-
-```
-deepcrate/
-├── cli.py                 # All CLI commands
-├── config.py              # .env settings
-├── db.py                  # SQLite database layer
-├── models.py              # Pydantic data models
-├── analysis/              # Audio analysis (scanner, analyzer, Camelot)
-├── planning/              # Set planning (AI prompts, scoring, gaps)
-├── discovery/             # Spotify integration
-└── export/                # M3U and Rekordbox XML export
+```bash
+cd DeepCrateMac
+swift build
 ```
 
-See [HOW-IT-WORKS.md](HOW-IT-WORKS.md) for detailed technical documentation.
+## Planner Behavior
 
-## Common Tasks
+- The planner interprets broad + specific genre language and DJ shorthand.
+- If a requested style is not in your library, it warns and falls back to the best available tracks.
+- It does not hard-fail by default; it prioritizes usable output.
 
-**Add a new export format:** Create a file in `export/`, follow the pattern of `m3u.py`.
+## Architecture (Current)
 
-**Adjust transition scoring:** Edit `deepcrate/planning/scoring.py`. Weights are in the `transition_score()` function.
+- `DeepCrateMac/`: SwiftUI app, local planner fallback, AVFoundation preview player
+- `deepcrate/mac_bridge.py`: command bridge used by the Swift app
+- `deepcrate/analysis/`: Python audio analysis (BPM/key/energy)
+- `deepcrate/planning/`: Python planning, scoring, gaps
+- `deepcrate/db.py`: SQLite persistence
 
-**Change the AI prompt:** Edit `deepcrate/planning/prompts.py`.
+## Swift-First Roadmap (Pure Swift End State)
 
-**Support new audio formats:** Add the extension to `AUDIO_EXTENSIONS` in `deepcrate/analysis/scanner.py`.
+1. Keep Swift UI as source of truth (done).
+2. Move bridge commands into Swift services one area at a time:
+   - scan/import
+   - set planning orchestration
+   - gap analysis + discovery
+   - export
+3. Replace Python analysis engine with native Swift DSP stack (Accelerate/AVFoundation/Core ML where appropriate), with regression tests against current outputs.
+4. Keep SQLite but migrate data access to Swift-only layer.
+5. Remove Python runtime dependency from app startup/build packaging.
 
-## Gotchas
+## Developer Commands
 
-- **Half-tempo detection:** For drum and bass (often recorded at half tempo), the tool auto-detects and adjusts BPM. You can manually correct tracks with `deepcrate edit <track-id> --bpm X`.
-- **Rekordbox paths:** File paths are exported as `file://localhost` URLs. This is required by Rekordbox's XML import format.
-- **Camelot notation:** Keys are stored as Camelot notation (e.g., "8A"), not musical note names. Reference the Camelot wheel if needed.
+### Swift
 
-## License
+```bash
+cd DeepCrateMac
+swift build
+swift run
+```
 
-[Add your license here]
+### Python Tests
 
-## Resources
+```bash
+cd DeepCrate
+.venv/bin/pytest -q
+```
 
-- [Camelot Harmonic Mixing Wheel](https://www.pacemaker.net/)
-- [OpenAI API Docs](https://platform.openai.com/docs)
-- [Librosa Documentation](https://librosa.org/)
-- [Rekordbox Import Format](https://www.pioneerdj.com/)
+## Repo Layout
+
+```text
+DeepCrateMac/                 Swift app (primary UI)
+deepcrate/analysis/           Python audio analysis
+deepcrate/planning/           Python planning + scoring + gaps
+deepcrate/mac_bridge.py       Swift <-> Python bridge
+deepcrate/db.py               SQLite layer
+tests/                        Python tests
+```
+
+## Notes
+
+- Set previews require local file paths to still exist (common external-drive workflows are supported as long as the drive is mounted).
+- Half/double-tempo matching is handled in transition scoring and genre filtering.
+- Keys are stored in Camelot notation (example: `8A`).

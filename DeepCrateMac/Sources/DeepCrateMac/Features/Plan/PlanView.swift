@@ -1,19 +1,45 @@
+import AppKit
 import SwiftUI
 
 struct PlanView: View {
-    private enum FocusTarget: Hashable {
-        case name
-        case description
+    private struct PromptPreset: Identifiable {
+        let id = UUID()
+        let title: String
+        let setName: String
+        let duration: Int
+        let prompt: String
     }
 
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var settings: AppSettings
 
-    @State private var name: String = "Sunday Session"
+    @State private var name: String = ""
     @State private var duration: Int = 60
-    @State private var description: String = "60 min liquid DnB set, start mellow, peak at 40 min"
+    @State private var description: String = ""
     @State private var isPlanning = false
-    @FocusState private var focusedField: FocusTarget?
+    @State private var inlineMessage: String = ""
+    @State private var inlineMessageIsError = false
+
+    private let presets: [PromptPreset] = [
+        PromptPreset(
+            title: "Liquid DnB Warmup",
+            setName: "Liquid Warmup",
+            duration: 60,
+            prompt: "60 minute liquid dnb journey, start mellow, build to a peak around minute 40, then cool down"
+        ),
+        PromptPreset(
+            title: "Hardstyle Peak Time",
+            setName: "Hardstyle Peak",
+            duration: 75,
+            prompt: "75 minute hardstyle peak-time set, aggressive energy from the start, keep pressure high and finish strong"
+        ),
+        PromptPreset(
+            title: "Afro House Sunset",
+            setName: "Afro Sunset",
+            duration: 90,
+            prompt: "90 minute afrohouse set for sunset, organic groove opening, steady lift, warm emotional finish"
+        ),
+    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -52,22 +78,53 @@ struct PlanView: View {
             .liquidCard(cornerRadius: LiquidMetrics.cardRadius, material: .ultraThinMaterial, contentPadding: 14, shadowOpacity: 0.04)
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("Prompt")
-                    .font(.headline)
-                TextField("Set Name", text: $name)
+                HStack {
+                    Text("Prompt")
+                        .font(.headline)
+                    Spacer()
+                    Menu("Use Example") {
+                        ForEach(presets) { preset in
+                            Button(preset.title) {
+                                applyPreset(preset)
+                            }
+                        }
+                        Divider()
+                        Button("Clear Prompt") {
+                            clearPrompt()
+                        }
+                    }
+                }
+
+                TextField("Set name (optional)", text: $name)
                     .textFieldStyle(.roundedBorder)
-                    .focused($focusedField, equals: .name)
                 Stepper("Duration: \(duration) min", value: $duration, in: 10...360)
-                TextEditor(text: $description)
-                    .frame(minHeight: 150)
-                    .padding(6)
-                    .focused($focusedField, equals: .description)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: LiquidMetrics.compactRadius, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: LiquidMetrics.compactRadius, style: .continuous)
-                            .stroke(.quaternary)
+
+                ZStack(alignment: .topLeading) {
+                    PromptTextEditor(text: $description)
+                        .frame(minHeight: 150)
+                        .padding(6)
+                        .background(
+                            .ultraThinMaterial,
+                            in: RoundedRectangle(cornerRadius: LiquidMetrics.compactRadius, style: .continuous)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: LiquidMetrics.compactRadius, style: .continuous)
+                                .stroke(.quaternary)
+                                .allowsHitTesting(false)
+                        )
+
+                    if normalizedDescription.isEmpty {
+                        Text("Describe vibe, genre, energy arc, and context. Example: 60 min liquid dnb set, start mellow and peak at 40 min.")
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 14)
+                            .padding(.top, 14)
                             .allowsHitTesting(false)
-                    )
+                    }
+                }
+
+                Text("If set name is empty or already used, DeepCrate auto-creates a unique name.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             .liquidCard(cornerRadius: LiquidMetrics.cardRadius, material: .ultraThinMaterial, contentPadding: 14, shadowOpacity: 0.04)
 
@@ -77,15 +134,26 @@ struct PlanView: View {
                 } label: {
                     Label(isPlanning ? "Planning..." : "Generate Set", systemImage: "wand.and.stars")
                 }
-                .disabled(isPlanning || name.isEmpty || description.isEmpty)
+                .disabled(isPlanning || normalizedDescription.isEmpty)
                 .buttonStyle(.borderedProminent)
 
-                if let latest = appState.setSummaries.first {
+                Button("Clear") {
+                    clearPrompt()
+                }
+                .buttonStyle(.bordered)
+                .disabled(isPlanning)
+
+                if let latest = latestSet {
                     Text("Latest: \(latest.name)")
                         .foregroundStyle(.secondary)
                 }
             }
             .liquidCard(cornerRadius: LiquidMetrics.compactRadius, material: .ultraThinMaterial, contentPadding: 10, shadowOpacity: 0.04)
+
+            if !inlineMessage.isEmpty {
+                Label(inlineMessage, systemImage: inlineMessageIsError ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                    .foregroundStyle(inlineMessageIsError ? .red : .secondary)
+            }
         }
         .task {
             await refreshSets()
@@ -97,12 +165,42 @@ struct PlanView: View {
         appState.statusMessage = "Planning set..."
         defer { isPlanning = false }
 
-        let localDescription = description
-        let localName = name
+        let localDescription = normalizedDescription
+        if localDescription.isEmpty {
+            inlineMessageIsError = true
+            inlineMessage = "Add a prompt before generating."
+            appState.statusMessage = "Set planning needs a prompt."
+            return
+        }
+
+        let localName = resolvedSetName()
         let localDuration = duration
+        name = localName
+
+        var preflightWarning: String?
+        do {
+            let tracks = try await ensureLibraryTracks()
+            let availability = LocalApplePlanner().evaluateGenreAvailability(
+                description: localDescription,
+                tracks: tracks
+            )
+            if let warning = availability.warningMessage {
+                preflightWarning = warning
+                inlineMessageIsError = false
+                inlineMessage = "Warning: \(warning)"
+                appState.statusMessage = warning
+            }
+        } catch {
+            appState.statusMessage = "Could not pre-check genre availability: \(error.localizedDescription)"
+        }
 
         if settings.plannerMode == .localApple {
-            await planWithAppleModel(description: localDescription, name: localName, duration: localDuration)
+            await planWithAppleModel(
+                description: localDescription,
+                name: localName,
+                duration: localDuration,
+                preflightWarning: preflightWarning
+            )
             return
         }
 
@@ -111,23 +209,28 @@ struct PlanView: View {
                 try BackendClient().plan(description: localDescription, name: localName, duration: localDuration)
             }.value
             appState.statusMessage = "Created set \(localName)"
+            inlineMessageIsError = false
+            if let preflightWarning {
+                inlineMessage = "Created set \(localName). Note: \(preflightWarning)"
+            } else {
+                inlineMessage = "Created set \(localName)"
+            }
             await refreshSets()
         } catch {
             appState.statusMessage = "Planning failed: \(error.localizedDescription)"
+            inlineMessageIsError = true
+            inlineMessage = "Planning failed: \(error.localizedDescription)"
         }
     }
 
-    private func planWithAppleModel(description: String, name: String, duration: Int) async {
+    private func planWithAppleModel(
+        description: String,
+        name: String,
+        duration: Int,
+        preflightWarning: String?
+    ) async {
         do {
-            let tracks: [Track]
-            if appState.libraryTracks.isEmpty {
-                tracks = try await Task.detached {
-                    try BackendClient().tracks(query: "", bpm: "", key: "", energy: "")
-                }.value
-                appState.libraryTracks = tracks
-            } else {
-                tracks = appState.libraryTracks
-            }
+            let tracks = try await ensureLibraryTracks()
 
             let planner = LocalApplePlanner()
             let ids = try await planner.planTrackIDs(description: description, durationMinutes: duration, tracks: tracks)
@@ -145,9 +248,17 @@ struct PlanView: View {
                 )
             }.value
             appState.statusMessage = "Created set \(name) with local Apple model"
+            inlineMessageIsError = false
+            if let preflightWarning {
+                inlineMessage = "Created set \(name). Note: \(preflightWarning)"
+            } else {
+                inlineMessage = "Created set \(name)"
+            }
             await refreshSets()
         } catch {
             appState.statusMessage = "Local planning failed: \(error.localizedDescription)"
+            inlineMessageIsError = true
+            inlineMessage = "Local planning failed: \(error.localizedDescription)"
         }
     }
 
@@ -159,6 +270,125 @@ struct PlanView: View {
             appState.setSummaries = sets
         } catch {
             appState.statusMessage = "Failed to load sets: \(error.localizedDescription)"
+        }
+    }
+
+    private func ensureLibraryTracks() async throws -> [Track] {
+        if !appState.libraryTracks.isEmpty {
+            return appState.libraryTracks
+        }
+        let tracks = try await Task.detached {
+            try BackendClient().tracks(query: "", bpm: "", key: "", energy: "")
+        }.value
+        appState.libraryTracks = tracks
+        return tracks
+    }
+
+    private var normalizedDescription: String {
+        description.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var latestSet: SetSummary? {
+        appState.setSummaries.max(by: { $0.id < $1.id })
+    }
+
+    private func clearPrompt() {
+        name = ""
+        duration = 60
+        description = ""
+    }
+
+    private func applyPreset(_ preset: PromptPreset) {
+        name = preset.setName
+        duration = preset.duration
+        description = preset.prompt
+    }
+
+    private func resolvedSetName() -> String {
+        let baseName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let seed = baseName.isEmpty ? defaultSetName() : baseName
+        let existing = Set(appState.setSummaries.map { $0.name.lowercased() })
+
+        if !existing.contains(seed.lowercased()) {
+            return seed
+        }
+
+        var index = 2
+        while true {
+            let candidate = "\(seed) \(index)"
+            if !existing.contains(candidate.lowercased()) {
+                return candidate
+            }
+            index += 1
+        }
+    }
+
+    private func defaultSetName() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d HH:mm"
+        return "Set \(formatter.string(from: Date()))"
+    }
+}
+
+private struct PromptTextEditor: NSViewRepresentable {
+    @Binding var text: String
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeNSView(context: Context) -> NSScrollView {
+        let scrollView = NSScrollView()
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.borderType = .noBorder
+        scrollView.drawsBackground = false
+
+        let textView = NSTextView()
+        textView.delegate = context.coordinator
+        textView.isEditable = true
+        textView.isSelectable = true
+        textView.isRichText = false
+        textView.importsGraphics = false
+        textView.usesFontPanel = false
+        textView.usesFindPanel = true
+        textView.allowsUndo = true
+        textView.font = .systemFont(ofSize: 14)
+        textView.textColor = .labelColor
+        textView.insertionPointColor = .labelColor
+        textView.backgroundColor = .clear
+        textView.drawsBackground = false
+        textView.isHorizontallyResizable = false
+        textView.autoresizingMask = [.width]
+        textView.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
+        textView.textContainer?.widthTracksTextView = true
+        textView.textContainerInset = NSSize(width: 4, height: 8)
+        textView.isAutomaticQuoteSubstitutionEnabled = false
+        textView.isAutomaticDashSubstitutionEnabled = false
+        textView.isAutomaticTextReplacementEnabled = false
+        textView.string = text
+
+        scrollView.documentView = textView
+        return scrollView
+    }
+
+    func updateNSView(_ nsView: NSScrollView, context: Context) {
+        guard let textView = nsView.documentView as? NSTextView else { return }
+        if textView.string != text {
+            textView.string = text
+        }
+    }
+
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        private var parent: PromptTextEditor
+
+        init(parent: PromptTextEditor) {
+            self.parent = parent
+        }
+
+        func textDidChange(_ notification: Notification) {
+            guard let textView = notification.object as? NSTextView else { return }
+            parent.text = textView.string
         }
     }
 }

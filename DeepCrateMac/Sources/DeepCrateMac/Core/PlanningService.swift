@@ -14,6 +14,24 @@ enum LocalPlanningError: LocalizedError {
     }
 }
 
+struct GenreAvailability {
+    let interpretedGenres: [String]
+    let matchingTrackCount: Int
+    let totalTrackCount: Int
+
+    var warningMessage: String? {
+        guard !interpretedGenres.isEmpty, totalTrackCount > 0 else { return nil }
+
+        if matchingTrackCount == 0 {
+            return "No \(interpretedGenres.joined(separator: ", ")) tracks found in library. Planner will fall back to best available tracks."
+        }
+        if matchingTrackCount < 6 {
+            return "Only \(matchingTrackCount) matching \(interpretedGenres.joined(separator: ", ")) tracks found. Planner may blend in adjacent styles."
+        }
+        return nil
+    }
+}
+
 struct LocalApplePlanner {
     private struct GenreProfile {
         let family: String
@@ -224,6 +242,24 @@ struct LocalApplePlanner {
         "2-step": "uk garage",
         "2 step": "uk garage",
     ]
+
+    func evaluateGenreAvailability(description: String, tracks: [Track]) -> GenreAvailability {
+        let profiles = inferGenreProfiles(from: description)
+        guard !profiles.isEmpty else {
+            return GenreAvailability(
+                interpretedGenres: [],
+                matchingTrackCount: tracks.count,
+                totalTrackCount: tracks.count
+            )
+        }
+
+        let candidates = genreCandidateTracks(tracks, profiles: profiles)
+        return GenreAvailability(
+            interpretedGenres: uniqueProfileNames(profiles),
+            matchingTrackCount: candidates.count,
+            totalTrackCount: tracks.count
+        )
+    }
 
     func planTrackIDs(description: String, durationMinutes: Int, tracks: [Track]) async throws -> [Int] {
         let targetCount = targetTrackCount(durationMinutes: durationMinutes)
@@ -509,7 +545,11 @@ struct LocalApplePlanner {
 
     private func filterTracks(_ tracks: [Track], profiles: [GenreProfile]) -> [Track] {
         guard !profiles.isEmpty else { return tracks }
+        let candidates = genreCandidateTracks(tracks, profiles: profiles)
+        return candidates.isEmpty ? tracks : candidates
+    }
 
+    private func genreCandidateTracks(_ tracks: [Track], profiles: [GenreProfile]) -> [Track] {
         let strictRanges = profileRanges(profiles, relaxed: false)
         let strict = tracks.filter { bpmMatchesAnyRange($0.bpm, ranges: strictRanges) }
         if strict.count >= 8 {
@@ -520,7 +560,7 @@ struct LocalApplePlanner {
         if relaxed.count >= 8 {
             return relaxed
         }
-        return strict.isEmpty ? (relaxed.isEmpty ? tracks : relaxed) : strict
+        return strict.isEmpty ? relaxed : strict
     }
 
     private func contextRelevance(_ track: Track, profiles: [GenreProfile]) -> Double {

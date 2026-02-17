@@ -159,11 +159,14 @@ struct BackendClient {
             SetTrackRow(
                 id: $0.position,
                 position: $0.position,
+                trackID: $0.trackID,
                 artist: $0.artist,
                 title: $0.title,
                 bpm: $0.bpm,
                 key: $0.musicalKey,
                 energy: $0.energyLevel,
+                filePath: $0.filePath,
+                previewStart: $0.previewStart,
                 transition: $0.transition
             )
         }
@@ -351,20 +354,26 @@ private struct SetTracksResponse: Decodable {
 
 private struct SetTrackDTO: Decodable {
     let position: Int
+    let trackID: Int
     let artist: String
     let title: String
     let bpm: Double
     let musicalKey: String
     let energyLevel: Double
+    let filePath: String
+    let previewStart: Double
     let transition: String
 
     enum CodingKeys: String, CodingKey {
         case position
+        case trackID = "track_id"
         case artist
         case title
         case bpm
         case musicalKey = "musical_key"
         case energyLevel = "energy_level"
+        case filePath = "file_path"
+        case previewStart = "preview_start"
         case transition
     }
 }
