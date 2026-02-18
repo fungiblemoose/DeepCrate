@@ -2,9 +2,9 @@ import AppKit
 import SwiftUI
 
 enum LiquidMetrics {
-    static let paneRadius: CGFloat = 24
-    static let cardRadius: CGFloat = 18
-    static let compactRadius: CGFloat = 14
+    static let paneRadius: CGFloat = 30
+    static let cardRadius: CGFloat = 22
+    static let compactRadius: CGFloat = 16
 }
 
 struct LiquidGroupBoxStyle: GroupBoxStyle {
@@ -104,14 +104,14 @@ struct WindowAppearanceConfigurator: NSViewRepresentable {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.titlebarAppearsTransparent = true
-        window.isMovableByWindowBackground = true
+        window.isMovableByWindowBackground = false
     }
 }
 
 extension View {
     func liquidPane(cornerRadius: CGFloat = LiquidMetrics.paneRadius) -> some View {
         self
-            .padding(18)
+            .padding(24)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -125,13 +125,13 @@ extension View {
                     )
                     .allowsHitTesting(false)
             )
-            .shadow(color: .black.opacity(0.08), radius: 20, x: 0, y: 10)
+            .shadow(color: .black.opacity(0.10), radius: 24, x: 0, y: 12)
     }
 
     func liquidCard(
         cornerRadius: CGFloat = LiquidMetrics.cardRadius,
         material: Material = .ultraThinMaterial,
-        contentPadding: CGFloat = 14,
+        contentPadding: CGFloat = 18,
         shadowOpacity: Double = 0.06
     ) -> some View {
         self

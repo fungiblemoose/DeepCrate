@@ -8,7 +8,7 @@ from functools import partial
 from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import QThreadPool, QTimer, QUrl
+from PySide6.QtCore import Qt, QThreadPool, QTimer, QUrl
 from PySide6.QtGui import QAction, QDesktopServices, QKeySequence
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtWidgets import (
@@ -788,6 +788,7 @@ class DeepCrateWindow(QMainWindow):
         self.sidebar.setObjectName("sidebar")
         self.sidebar.setSelectionMode(QAbstractItemView.SingleSelection)
         self.sidebar.setFrameShape(QFrame.NoFrame)
+        self.sidebar.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         self.stack = QStackedWidget()
         pages = [
@@ -813,8 +814,6 @@ class DeepCrateWindow(QMainWindow):
         self.setCentralWidget(container)
         self._build_menu_bar()
 
-        if platform.system() == "Darwin":
-            self.setUnifiedTitleAndToolBarOnMac(True)
         self.refresh_set_tabs()
 
     def refresh_set_tabs(self) -> None:

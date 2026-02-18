@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 struct PlanView: View {
@@ -42,10 +41,10 @@ struct PlanView: View {
     ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
             HStack {
                 Text("Plan Set")
-                    .font(.system(size: 34, weight: .semibold, design: .rounded))
+                    .font(.system(size: 40, weight: .semibold, design: .rounded))
 
                 Spacer()
 
@@ -55,7 +54,7 @@ struct PlanView: View {
                 )
             }
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Planner")
                     .font(.headline)
                 HStack {
@@ -77,7 +76,7 @@ struct PlanView: View {
             }
             .liquidCard(cornerRadius: LiquidMetrics.cardRadius, material: .ultraThinMaterial, contentPadding: 14, shadowOpacity: 0.04)
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     Text("Prompt")
                         .font(.headline)
@@ -99,28 +98,30 @@ struct PlanView: View {
                     .textFieldStyle(.roundedBorder)
                 Stepper("Duration: \(duration) min", value: $duration, in: 10...360)
 
-                ZStack(alignment: .topLeading) {
-                    PromptTextEditor(text: $description)
-                        .frame(minHeight: 150)
-                        .padding(6)
-                        .background(
-                            .ultraThinMaterial,
-                            in: RoundedRectangle(cornerRadius: LiquidMetrics.compactRadius, style: .continuous)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: LiquidMetrics.compactRadius, style: .continuous)
-                                .stroke(.quaternary)
+                TextEditor(text: $description)
+                    .font(.system(size: 16))
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 210)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 8)
+                    .background(
+                        .ultraThinMaterial,
+                        in: RoundedRectangle(cornerRadius: LiquidMetrics.compactRadius, style: .continuous)
+                    )
+                    .overlay(alignment: .topLeading) {
+                        if normalizedDescription.isEmpty {
+                            Text("Describe vibe, genre, energy arc, and context. Example: 60 min liquid dnb set, start mellow and peak at 40 min.")
+                                .foregroundStyle(.secondary)
+                                .padding(.leading, 12)
+                                .padding(.top, 13)
                                 .allowsHitTesting(false)
-                        )
-
-                    if normalizedDescription.isEmpty {
-                        Text("Describe vibe, genre, energy arc, and context. Example: 60 min liquid dnb set, start mellow and peak at 40 min.")
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 14)
-                            .padding(.top, 14)
-                            .allowsHitTesting(false)
+                        }
                     }
-                }
+                    .overlay(
+                        RoundedRectangle(cornerRadius: LiquidMetrics.compactRadius, style: .continuous)
+                            .stroke(.quaternary)
+                            .allowsHitTesting(false)
+                    )
 
                 Text("If set name is empty or already used, DeepCrate auto-creates a unique name.")
                     .font(.caption)
@@ -393,68 +394,5 @@ struct PlanView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d HH:mm"
         return "Set \(formatter.string(from: Date()))"
-    }
-}
-
-private struct PromptTextEditor: NSViewRepresentable {
-    @Binding var text: String
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(parent: self)
-    }
-
-    func makeNSView(context: Context) -> NSScrollView {
-        let scrollView = NSScrollView()
-        scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = false
-        scrollView.borderType = .noBorder
-        scrollView.drawsBackground = false
-
-        let textView = NSTextView()
-        textView.delegate = context.coordinator
-        textView.isEditable = true
-        textView.isSelectable = true
-        textView.isRichText = false
-        textView.importsGraphics = false
-        textView.usesFontPanel = false
-        textView.usesFindPanel = true
-        textView.allowsUndo = true
-        textView.font = .systemFont(ofSize: 14)
-        textView.textColor = .labelColor
-        textView.insertionPointColor = .labelColor
-        textView.backgroundColor = .clear
-        textView.drawsBackground = false
-        textView.isHorizontallyResizable = false
-        textView.autoresizingMask = [.width]
-        textView.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
-        textView.textContainer?.widthTracksTextView = true
-        textView.textContainerInset = NSSize(width: 4, height: 8)
-        textView.isAutomaticQuoteSubstitutionEnabled = false
-        textView.isAutomaticDashSubstitutionEnabled = false
-        textView.isAutomaticTextReplacementEnabled = false
-        textView.string = text
-
-        scrollView.documentView = textView
-        return scrollView
-    }
-
-    func updateNSView(_ nsView: NSScrollView, context: Context) {
-        guard let textView = nsView.documentView as? NSTextView else { return }
-        if textView.string != text {
-            textView.string = text
-        }
-    }
-
-    final class Coordinator: NSObject, NSTextViewDelegate {
-        private var parent: PromptTextEditor
-
-        init(parent: PromptTextEditor) {
-            self.parent = parent
-        }
-
-        func textDidChange(_ notification: Notification) {
-            guard let textView = notification.object as? NSTextView else { return }
-            parent.text = textView.string
-        }
     }
 }

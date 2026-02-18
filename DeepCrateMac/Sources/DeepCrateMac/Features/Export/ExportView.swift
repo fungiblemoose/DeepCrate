@@ -5,7 +5,7 @@ struct ExportView: View {
 
     @State private var selectedSetID: Int?
     @State private var format: String = "m3u"
-    @State private var outputPath: String = "~/Desktop/DeepCrate_Set.m3u"
+    @State private var outputPath: String = "~/Downloads/DeepCrate_Set.m3u"
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -27,6 +27,9 @@ struct ExportView: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(maxWidth: 280)
+                .onChange(of: format) { _, newValue in
+                    updateOutputExtension(for: newValue)
+                }
 
                 TextField("Output Path", text: $outputPath)
                     .textFieldStyle(.roundedBorder)
@@ -73,6 +76,26 @@ struct ExportView: View {
             appState.statusMessage = "Exported to \(path)"
         } catch {
             appState.statusMessage = "Export failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func updateOutputExtension(for selectedFormat: String) {
+        let normalized = selectedFormat.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let expected = normalized == "m3u" ? "m3u" : "xml"
+        let trimmed = outputPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let expanded = (trimmed as NSString).expandingTildeInPath
+        let url = URL(fileURLWithPath: expanded)
+        let current = url.pathExtension.lowercased()
+        guard !current.isEmpty, current != expected else { return }
+
+        let adjusted = url.deletingPathExtension().appendingPathExtension(expected)
+        let home = NSHomeDirectory()
+        if adjusted.path.hasPrefix(home + "/") {
+            outputPath = "~" + adjusted.path.dropFirst(home.count)
+        } else {
+            outputPath = adjusted.path
         }
     }
 }
