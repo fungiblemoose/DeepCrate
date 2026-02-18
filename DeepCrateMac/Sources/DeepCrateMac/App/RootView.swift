@@ -18,51 +18,51 @@ struct RootView: View {
     var body: some View {
         NavigationSplitView {
             ZStack {
-                VisualEffectGlass(material: .sidebar, blendingMode: .withinWindow)
+                LinearGradient(
+                    colors: [Color.black.opacity(0.20), Color.blue.opacity(0.12), Color.black.opacity(0.12)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
                 .ignoresSafeArea()
 
                 List(SidebarItem.allCases, selection: $selection) { item in
-                    HStack(spacing: 10) {
+                    HStack(spacing: 12) {
                         Image(systemName: icon(for: item))
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .frame(width: 22)
+                            .font(.title3.weight(.semibold))
+                            .frame(width: 24)
                         Text(item.rawValue)
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(.primary)
+                            .font(.title3.weight(.semibold))
                     }
-                    .padding(.vertical, 5)
-                    .padding(.horizontal, 6)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 10)
                     .tag(item)
                 }
-                .listStyle(.sidebar)
                 .scrollContentBackground(.hidden)
-                .background(Color.black.opacity(0.06))
+                .listStyle(.sidebar)
+                .background(Color.clear)
             }
             .navigationTitle("DeepCrate")
+            .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 280)
         } detail: {
             ZStack {
-                VisualEffectGlass(material: .underWindowBackground, blendingMode: .behindWindow)
-                    .ignoresSafeArea()
-
                 LinearGradient(
-                    colors: [Color.blue.opacity(0.08), Color.white.opacity(0.06), Color.cyan.opacity(0.08)],
+                    colors: [Color.blue.opacity(0.10), Color.white.opacity(0.05), Color.cyan.opacity(0.09)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
                 .ignoresSafeArea()
 
                 Circle()
-                    .fill(Color.white.opacity(0.20))
-                    .frame(width: 460, height: 460)
-                    .blur(radius: 72)
-                    .offset(x: -260, y: -220)
+                    .fill(Color.white.opacity(0.18))
+                    .frame(width: 520, height: 520)
+                    .blur(radius: 70)
+                    .offset(x: -300, y: -260)
 
                 Circle()
-                    .fill(Color.blue.opacity(0.12))
-                    .frame(width: 560, height: 560)
-                    .blur(radius: 96)
-                    .offset(x: 300, y: 260)
+                    .fill(Color.blue.opacity(0.15))
+                    .frame(width: 620, height: 620)
+                    .blur(radius: 90)
+                    .offset(x: 340, y: 260)
 
                 Group {
                     switch selection ?? .library {
@@ -81,19 +81,22 @@ struct RootView: View {
                     }
                 }
                 .groupBoxStyle(LiquidGroupBoxStyle())
+                .frame(maxWidth: 1380, maxHeight: .infinity, alignment: .topLeading)
                 .liquidPane(cornerRadius: LiquidMetrics.paneRadius)
-                .padding(20)
+                .padding(24)
             }
         }
-        .background(WindowAppearanceConfigurator().frame(width: 0, height: 0))
+        .controlSize(.large)
         .toolbar {
             ToolbarItem(placement: .status) {
                 LiquidStatusBadge(text: appState.statusMessage)
             }
         }
     }
+}
 
-    private func icon(for item: SidebarItem) -> String {
+private extension RootView {
+    func icon(for item: SidebarItem) -> String {
         switch item {
         case .library: return "music.note.list"
         case .plan: return "wand.and.stars"
