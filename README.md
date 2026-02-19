@@ -11,6 +11,44 @@ AI-powered DJ set builder. Analyze your music library, plan sets with natural la
 - **Spotify Discovery** — Search Spotify to fill gaps in your library
 - **Multi-Format Export** — Export to M3U (standard) or Rekordbox XML (professional DJ software)
 
+## Example Walkthrough
+
+Here's a complete session from raw music files to an exported DJ set:
+
+```bash
+# 1. Scan your library (takes a few minutes for large collections)
+deepcrate scan ~/Music
+# → Analyzed 847 tracks. Added 847, updated 0, skipped 0.
+
+# 2. Check what's in your library
+deepcrate stats
+# → 847 tracks | BPM: 90–180 | Top keys: 8A, 9A, 2A
+
+# 3. Find tracks by feel
+deepcrate search --bpm 124-128 --key 8A --energy high
+# → 23 tracks matching your filters
+
+# 4. Plan a set with AI
+deepcrate plan "dark minimal techno, steady 126 BPM, 60 minutes" \
+  --name "Late Night" \
+  --duration 60
+# → Set "Late Night" created with 14 tracks. Avg transition score: 0.87
+
+# 5. Review the set
+deepcrate show "Late Night"
+
+# 6. Find any weak spots
+deepcrate gaps "Late Night"
+# → Gap at position 7: score 0.42. Needs a track around 126 BPM in key 9A.
+
+# 7. Search Spotify to fill it
+deepcrate discover --name "Late Night" --gap 7
+
+# 8. Export to Rekordbox
+deepcrate export "Late Night" --format rekordbox
+# → Exported to late_night.xml
+```
+
 ## Quick Start
 
 ### Installation
