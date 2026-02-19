@@ -22,6 +22,30 @@ DeepCrate is a Swift-native macOS app for DJs. It scans your library, analyzes B
 - Gap analysis in Swift with severity and plain-language guidance
 - Export to M3U/Rekordbox XML
 
+## Usage Walkthrough
+
+Here's what a typical session looks like once the app is running:
+
+**1. Scan your library**  
+Go to the Library tab → click Scan → point it at your music folder. DeepCrate analyzes each file for BPM, key (Camelot notation), and energy. Large collections take a few minutes; subsequent scans skip unchanged files.
+
+**2. Review your tracks**  
+The Library view shows all analyzed tracks with BPM, key, and energy. Flag anything that looks off for reanalysis, or manually override metadata from the track detail panel.
+
+**3. Plan a set**  
+Go to Sets → New Set → describe what you want in plain language:
+- *"uplifting techno, 126–128 BPM, 60 minutes"*
+- *"dnb rollers, energetic build, 45 min"*
+- *"afrohouse into tropical, sunset vibe, 90 min"*
+
+The AI reads your library and builds a tracklist with scored transitions. If your library doesn't have enough of a requested style, it warns you and falls back gracefully.
+
+**4. Check transitions**  
+Each transition gets a score (0–1) based on key compatibility, BPM match, and energy flow. Scores under 0.5 are flagged — the gap analysis view tells you exactly what kind of track would fix it and why.
+
+**5. Export**  
+When you're happy with the set, export to M3U (works with most players) or Rekordbox XML (for Pioneer gear). Done.
+
 ## Quick Start (Swift App)
 
 ### Requirements
