@@ -9,6 +9,14 @@ final class AppSettings: ObservableObject {
         var id: String { rawValue }
     }
 
+    enum TransitionRiskMode: String, CaseIterable, Identifiable {
+        case safe = "Safe"
+        case balanced = "Balanced"
+        case bold = "Bold"
+
+        var id: String { rawValue }
+    }
+
     @Published var openAIKey: String {
         didSet { UserDefaults.standard.set(openAIKey, forKey: Keys.openAIKey) }
     }
@@ -27,6 +35,9 @@ final class AppSettings: ObservableObject {
     @Published var plannerMode: PlannerMode {
         didSet { UserDefaults.standard.set(plannerMode.rawValue, forKey: Keys.plannerMode) }
     }
+    @Published var transitionRiskMode: TransitionRiskMode {
+        didSet { UserDefaults.standard.set(transitionRiskMode.rawValue, forKey: Keys.transitionRiskMode) }
+    }
 
     init() {
         self.openAIKey = UserDefaults.standard.string(forKey: Keys.openAIKey) ?? ""
@@ -37,6 +48,9 @@ final class AppSettings: ObservableObject {
 
         let storedMode = UserDefaults.standard.string(forKey: Keys.plannerMode)
         self.plannerMode = PlannerMode(rawValue: storedMode ?? "") ?? .localApple
+
+        let storedRisk = UserDefaults.standard.string(forKey: Keys.transitionRiskMode)
+        self.transitionRiskMode = TransitionRiskMode(rawValue: storedRisk ?? "") ?? .balanced
     }
 }
 
@@ -47,4 +61,5 @@ private enum Keys {
     static let spotifyClientSecret = "settings.spotifyClientSecret"
     static let databasePath = "settings.databasePath"
     static let plannerMode = "settings.plannerMode"
+    static let transitionRiskMode = "settings.transitionRiskMode"
 }
