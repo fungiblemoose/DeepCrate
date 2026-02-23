@@ -14,6 +14,13 @@ struct SettingsView: View {
                 .pickerStyle(.menu)
 
                 TextField("OpenAI Model", text: $settings.openAIModel)
+
+                Picker("Transition Risk", selection: $settings.transitionRiskMode) {
+                    ForEach(AppSettings.TransitionRiskMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
             }
 
             Section("Credentials") {

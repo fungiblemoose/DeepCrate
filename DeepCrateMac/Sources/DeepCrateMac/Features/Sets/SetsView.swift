@@ -180,6 +180,13 @@ struct SetsView: View {
                         StatChip(title: "Energy Δ", value: energyDeltaText(from: previous, to: row))
                     }
 
+                    HStack(spacing: 10) {
+                        StatChip(title: "Key Fit", value: percent(row.keyScore))
+                        StatChip(title: "Tempo Fit", value: percent(row.bpmScore))
+                        StatChip(title: "Energy Fit", value: percent(row.energyScore))
+                        StatChip(title: "Phrase Fit", value: percent(row.phraseScore))
+                    }
+
                     Text(transitionExplanation(for: row, previous: previous))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -290,6 +297,10 @@ struct SetsView: View {
 
     private func previewButtonTitle(for row: SetTrackRow) -> String {
         isPreviewing(row) ? "Stop Preview" : "Play Preview"
+    }
+
+    private func percent(_ value: Double) -> String {
+        "\(Int((max(0.0, min(value, 1.0)) * 100).rounded()))%"
     }
 }
 
