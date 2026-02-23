@@ -138,9 +138,26 @@ struct GapsView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
+                if !gap.weakReason.isEmpty {
+                    Text(gap.weakReason)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 Text("Suggested move: find a track near \(Int(gap.suggestedBPM.rounded())) BPM in \(gap.suggestedKey), then insert it between these tracks.")
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+
+                if !gap.bridgeCandidates.isEmpty {
+                    Text("Smart Bridge Picks")
+                        .font(.subheadline.weight(.semibold))
+                    ForEach(gap.bridgeCandidates, id: \.self) { candidate in
+                        Text("• \(candidate)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             } else {
                 Text("Select a gap row to see why it was flagged and how to fix it.")
                     .foregroundStyle(.secondary)

@@ -88,6 +88,11 @@ struct SetTrackRow: Identifiable, Hashable {
     var filePath: String
     var previewStart: Double
     var transition: String
+    var transitionScore: Double = 0
+    var keyScore: Double = 0
+    var bpmScore: Double = 0
+    var energyScore: Double = 0
+    var phraseScore: Double = 0
 }
 
 struct GapSuggestion: Identifiable, Hashable {
@@ -97,14 +102,27 @@ struct GapSuggestion: Identifiable, Hashable {
     var score: Double
     var suggestedBPM: Double
     var suggestedKey: String
+    var weakReason: String
+    var bridgeCandidates: [String]
 
-    init(id: UUID = UUID(), fromTrack: String, toTrack: String, score: Double, suggestedBPM: Double, suggestedKey: String) {
+    init(
+        id: UUID = UUID(),
+        fromTrack: String,
+        toTrack: String,
+        score: Double,
+        suggestedBPM: Double,
+        suggestedKey: String,
+        weakReason: String = "",
+        bridgeCandidates: [String] = []
+    ) {
         self.id = id
         self.fromTrack = fromTrack
         self.toTrack = toTrack
         self.score = score
         self.suggestedBPM = suggestedBPM
         self.suggestedKey = suggestedKey
+        self.weakReason = weakReason
+        self.bridgeCandidates = bridgeCandidates
     }
 }
 
