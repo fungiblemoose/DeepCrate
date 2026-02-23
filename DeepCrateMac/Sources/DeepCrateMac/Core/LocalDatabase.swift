@@ -25,6 +25,12 @@ final class LocalDatabase: @unchecked Sendable {
 
     private init() {}
 
+    private enum TransitionRiskMode: String {
+        case safe = "Safe"
+        case balanced = "Balanced"
+        case bold = "Bold"
+    }
+
     func listSets() throws -> [SetSummary] {
         try withConnection { db in
             let sql = "SELECT id, name, description, target_duration FROM sets ORDER BY id DESC"
@@ -119,9 +125,47 @@ final class LocalDatabase: @unchecked Sendable {
                         energy: doubleColumn(stmt, 7),
                         filePath: textColumn(stmt, 8),
                         previewStart: doubleColumn(stmt, 9),
-                        transition: transition
+                        transition: transition,
+                        transitionScore: score,
+                        keyScore: 0,
+                        bpmScore: 0,
+                        energyScore: 0,
+                        phraseScore: 0
                     )
                 )
+            }
+
+            if rows.count > 1 {
+                for index in 1..<rows.count {
+                    let previous = rows[index - 1]
+                    let current = rows[index]
+                    let components = transitionComponents(
+                        from: Track(
+                            id: previous.trackID,
+                            artist: previous.artist,
+                            title: previous.title,
+                            bpm: previous.bpm,
+                            key: previous.key,
+                            energy: previous.energy
+                        ),
+                        to: Track(
+                            id: current.trackID,
+                            artist: current.artist,
+                            title: current.title,
+                            bpm: current.bpm,
+                            key: current.key,
+                            energy: current.energy
+                        ),
+                        fallbackScore: current.transitionScore
+                    )
+                    let updatedScore = transitionScore(from: components)
+                    rows[index].transitionScore = updatedScore
+                    rows[index].transition = "\(describeTransition(updatedScore)) (\(Int((updatedScore * 100).rounded()))%)"
+                    rows[index].keyScore = components.key
+                    rows[index].bpmScore = components.bpm
+                    rows[index].energyScore = components.energy
+                    rows[index].phraseScore = components.phrase
+                }
             }
             return rows
         }
@@ -210,6 +254,16 @@ final class LocalDatabase: @unchecked Sendable {
                 let avgBPM = ((from.bpm + to.bpm) / 2.0).rounded(toPlaces: 1)
                 let avgEnergy = ((from.energy + to.energy) / 2.0).rounded(toPlaces: 2)
                 let suggestedKey = suggestedBridgeKey(from: from.key, to: to.key)
+                let reason = weakReason(from: from, to: to)
+                let candidates = try bridgeCandidates(
+                    db: db,
+                    from: from,
+                    to: to,
+                    targetBPM: avgBPM,
+                    targetKey: suggestedKey,
+                    targetEnergy: avgEnergy,
+                    setID: setID
+                )
 
                 suggestions.append(
                     GapSuggestion(
@@ -217,7 +271,9 @@ final class LocalDatabase: @unchecked Sendable {
                         toTrack: to.displayName,
                         score: score,
                         suggestedBPM: avgBPM,
-                        suggestedKey: suggestedKey
+                        suggestedKey: suggestedKey,
+                        weakReason: reason,
+                        bridgeCandidates: candidates
                     )
                 )
                 inserts.append((position: weakPosition, bpm: avgBPM, key: suggestedKey, energy: avgEnergy))
@@ -463,10 +519,110 @@ final class LocalDatabase: @unchecked Sendable {
     }
 
     private func transitionScore(_ a: Track, _ b: Track) -> Double {
-        let key = keyCompatibility(a.key, b.key)
-        let bpm = bpmCompatibility(a.bpm, b.bpm)
-        let energy = energyFlow(a.energy, b.energy)
-        return (0.4 * key + 0.35 * bpm + 0.25 * energy).rounded(toPlaces: 2)
+        transitionScore(from: transitionComponents(from: a, to: b, fallbackScore: 0.5))
+    }
+
+    private func transitionScore(from components: (key: Double, bpm: Double, energy: Double, phrase: Double)) -> Double {
+        let risk = transitionRiskMode()
+        let weights: (Double, Double, Double, Double)
+        switch risk {
+        case .safe:
+            weights = (0.42, 0.34, 0.18, 0.06)
+        case .bold:
+            weights = (0.28, 0.27, 0.31, 0.14)
+        case .balanced:
+            weights = (0.36, 0.32, 0.22, 0.10)
+        }
+        return (
+            (weights.0 * components.key)
+            + (weights.1 * components.bpm)
+            + (weights.2 * components.energy)
+            + (weights.3 * components.phrase)
+        ).rounded(toPlaces: 2)
+    }
+
+    private func transitionRiskMode() -> TransitionRiskMode {
+        let value = UserDefaults.standard.string(forKey: "settings.transitionRiskMode") ?? TransitionRiskMode.balanced.rawValue
+        return TransitionRiskMode(rawValue: value) ?? .balanced
+    }
+
+    private func transitionComponents(from: Track?, to: Track?, fallbackScore: Double) -> (key: Double, bpm: Double, energy: Double, phrase: Double) {
+        guard let from, let to else {
+            return (key: fallbackScore, bpm: fallbackScore, energy: fallbackScore, phrase: fallbackScore)
+        }
+        return (
+            key: keyCompatibility(from.key, to.key),
+            bpm: bpmCompatibility(from.bpm, to.bpm),
+            energy: energyFlow(from.energy, to.energy),
+            phrase: phraseCompatibility(from: from, to: to)
+        )
+    }
+
+    private func weakReason(from: Track, to: Track) -> String {
+        let components = transitionComponents(from: from, to: to, fallbackScore: 0.5)
+        let lowest = min(components.key, components.bpm, components.energy, components.phrase)
+        if lowest == components.key {
+            return "Harmonic mismatch is the main issue. Try a bridge in a compatible Camelot key."
+        }
+        if lowest == components.bpm {
+            return "Tempo jump is the main issue. Use a bridge track closer to both BPMs."
+        }
+        if lowest == components.phrase {
+            return "Phrase structure is awkward. Try a bridge with intro/outro sections that phrase cleanly."
+        }
+        return "Energy swing is the main issue. Insert a track with midpoint intensity."
+    }
+
+    private func bridgeCandidates(
+        db: OpaquePointer,
+        from: Track,
+        to: Track,
+        targetBPM: Double,
+        targetKey: String,
+        targetEnergy: Double,
+        setID: Int
+    ) throws -> [String] {
+        let sql = """
+        SELECT t.artist, t.title, t.bpm, t.musical_key, t.energy_level, t.duration
+        FROM tracks t
+        WHERE t.id NOT IN (SELECT track_id FROM set_tracks WHERE set_id = ?)
+        LIMIT 200
+        """
+        let stmt = try prepare(db: db, sql: sql)
+        defer { sqlite3_finalize(stmt) }
+        bindInt(stmt, index: 1, value: setID)
+
+        var scored: [(name: String, score: Double)] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            let artist = nonEmpty(textColumn(stmt, 0), fallback: "Unknown Artist")
+            let title = displayTitle(title: textColumn(stmt, 1), filePath: "")
+            let bpm = doubleColumn(stmt, 2)
+            let key = textColumn(stmt, 3)
+            let energy = doubleColumn(stmt, 4)
+            let duration = doubleColumn(stmt, 5)
+
+            let bpmScore = bpmCompatibility(targetBPM, bpm)
+            let keyScore = max(
+                keyCompatibility(from.key, key),
+                keyCompatibility(key, to.key),
+                keyCompatibility(targetKey, key)
+            )
+            let energyScore = max(0.0, 1.0 - abs(targetEnergy - energy))
+            let phraseScore = phraseCompatibility(
+                from: from,
+                to: Track(id: 0, artist: artist, title: title, bpm: bpm, key: key, energy: energy, duration: duration)
+            )
+            let total = transitionScore(from: (key: keyScore, bpm: bpmScore, energy: energyScore, phrase: phraseScore))
+            if total < 0.55 {
+                continue
+            }
+            scored.append((name: "\(artist) - \(title)", score: total))
+        }
+
+        return scored
+            .sorted(by: { $0.score > $1.score })
+            .prefix(3)
+            .map(\.name)
     }
 
     private func bpmCompatibility(_ lhs: Double, _ rhs: Double) -> Double {
@@ -501,6 +657,33 @@ final class LocalDatabase: @unchecked Sendable {
             score = 0.9
         }
         return score.rounded(toPlaces: 2)
+    }
+
+    private func phraseCompatibility(from: Track, to: Track) -> Double {
+        guard from.bpm > 0, to.bpm > 0, from.duration > 0, to.duration > 0 else { return 0.6 }
+
+        let fromBars = estimatedBars(duration: from.duration, bpm: from.bpm)
+        let toBars = estimatedBars(duration: to.duration, bpm: to.bpm)
+        let fromFit = nearestPhraseBlockFit(fromBars)
+        let toFit = nearestPhraseBlockFit(toBars)
+        return ((fromFit + toFit) / 2.0).rounded(toPlaces: 2)
+    }
+
+    private func estimatedBars(duration: Double, bpm: Double) -> Double {
+        (duration * bpm) / 240.0
+    }
+
+    private func nearestPhraseBlockFit(_ bars: Double) -> Double {
+        guard bars > 0 else { return 0.4 }
+        let blocks = [8.0, 16.0, 32.0, 64.0]
+        var best = 0.0
+        for block in blocks {
+            let remainder = bars.truncatingRemainder(dividingBy: block)
+            let distance = min(remainder, block - remainder)
+            let fit = max(0.0, 1.0 - (distance / (block / 2.0)))
+            best = max(best, fit)
+        }
+        return best
     }
 
     private func keyCompatibility(_ lhs: String, _ rhs: String) -> Double {
