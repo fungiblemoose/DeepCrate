@@ -1,0 +1,7 @@
+DeepCrate bundle notes
+
+- The embedded Python bridge uses a bundled virtual environment under
+  Contents/Resources/DeepCrateRuntime/.venv.
+- User data and the default database path resolve to:
+  ~/Library/Application Support/DeepCrate/data/deepcrate.sqlite
+- API keys can be set in-app (Settings) and are forwarded to the bridge.
