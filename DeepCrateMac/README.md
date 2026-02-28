@@ -92,3 +92,8 @@ Optional signing/notarization environment variables:
 GitHub Actions workflow:
 
 - `.github/workflows/release-macos.yml` builds the macOS bundle on tag pushes (`v*`) and uploads the DMG/ZIP to the release.
+
+## Licensing
+
+- Project license: MIT (`../LICENSE`)
+- Third-party notices: `../THIRD_PARTY_NOTICES.md`

@@ -149,6 +149,13 @@ deepcrate/db.py               SQLite layer
 tests/                        Python tests
 ```
 
+## Licensing
+
+- This repository is licensed under the MIT License. See `LICENSE`.
+- Third-party dependency notices are summarized in `THIRD_PARTY_NOTICES.md`.
+- Some optional and legacy flows use copyleft-licensed dependencies. Review
+  third-party terms before redistribution.
+
 ## Notes
 
 - Set previews require local file paths to still exist (common external-drive workflows are supported as long as the drive is mounted).
