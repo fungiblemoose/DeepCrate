@@ -2,7 +2,7 @@ import SwiftUI
 
 enum SidebarItem: String, CaseIterable, Identifiable {
     case library = "Library"
-    case plan = "Plan Set"
+    case plan = "Build Set"
     case sets = "Sets"
     case gaps = "Gaps"
     case discover = "Discover"
@@ -22,53 +22,90 @@ struct RootView: View {
             NavigationSplitView(columnVisibility: $splitViewVisibility) {
                 ZStack {
                     LinearGradient(
-                        colors: [Color.black.opacity(0.20), Color.blue.opacity(0.12), Color.black.opacity(0.12)],
+                        colors: [Color.black.opacity(0.20), Color.orange.opacity(0.10), Color.teal.opacity(0.10)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     .ignoresSafeArea()
 
-                    List(SidebarItem.allCases, selection: $selection) { item in
-                        HStack(spacing: 12) {
-                            Image(systemName: icon(for: item))
-                                .font(.title3.weight(.semibold))
-                                .frame(width: 24)
-                            Text(item.rawValue)
-                                .font(.title3.weight(.semibold))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                                .allowsTightening(true)
+                    VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("DeepCrate")
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                            Text("Build playable crates from your own library.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
                         }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 10)
-                        .tag(item)
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.16), Color.orange.opacity(0.14), Color.teal.opacity(0.12)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            in: RoundedRectangle(cornerRadius: LiquidMetrics.cardRadius, style: .continuous)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: LiquidMetrics.cardRadius, style: .continuous)
+                                .strokeBorder(Color.white.opacity(0.16), lineWidth: 1)
+                        )
+
+                        List(SidebarItem.allCases, selection: $selection) { item in
+                            HStack(spacing: 12) {
+                                Image(systemName: icon(for: item))
+                                    .font(.title3.weight(.semibold))
+                                    .frame(width: 24)
+                                Text(item.rawValue)
+                                    .font(.title3.weight(.semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                    .allowsTightening(true)
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 10)
+                            .tag(item)
+                        }
+                        .scrollContentBackground(.hidden)
+                        .listStyle(.sidebar)
+                        .background(Color.clear)
                     }
-                    .scrollContentBackground(.hidden)
-                    .listStyle(.sidebar)
-                    .background(Color.clear)
+                    .padding(14)
                 }
                 .navigationTitle("DeepCrate")
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 280)
             } detail: {
                 ZStack {
                     LinearGradient(
-                        colors: [Color.blue.opacity(0.10), Color.white.opacity(0.05), Color.cyan.opacity(0.09)],
+                        colors: [Color.orange.opacity(0.08), Color.white.opacity(0.06), Color.teal.opacity(0.10)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     .ignoresSafeArea()
 
                     Circle()
-                        .fill(Color.white.opacity(0.18))
-                        .frame(width: 520, height: 520)
-                        .blur(radius: 70)
-                        .offset(x: -300, y: -260)
+                        .fill(Color.orange.opacity(0.16))
+                        .frame(width: 540, height: 540)
+                        .blur(radius: 78)
+                        .offset(x: -320, y: -260)
 
                     Circle()
-                        .fill(Color.blue.opacity(0.15))
-                        .frame(width: 620, height: 620)
-                        .blur(radius: 90)
-                        .offset(x: 340, y: 260)
+                        .fill(Color.teal.opacity(0.14))
+                        .frame(width: 640, height: 640)
+                        .blur(radius: 92)
+                        .offset(x: 340, y: 250)
+
+                    RoundedRectangle(cornerRadius: 280, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.07), Color.clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 760, height: 420)
+                        .blur(radius: 40)
+                        .offset(x: 180, y: -220)
 
                     Group {
                         switch selection ?? .library {

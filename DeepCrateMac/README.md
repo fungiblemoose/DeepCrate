@@ -6,12 +6,12 @@ It is a hybrid app today: the UI, set-planning logic, persistence, gap analysis,
 
 ## Current Status
 
-- Native SwiftUI app with pages: Library, Plan Set, Sets, Gaps, Discover, Export
+- Native SwiftUI app with pages: Library, Build Set, Sets, Gaps, Discover, Export
 - Local audio preview in Library and Sets
 - Manual metadata overrides + review workflow in Library
 - Planning modes:
   - Local Apple Foundation Models planner
-  - OpenAI planner via direct HTTP from Swift
+  - Local model server planner via chat-completions HTTP
 - SQLite reads/writes for tracks, sets, set tracks, and gaps in Swift
 - Gap analysis + severity labeling in Swift
 - M3U/Rekordbox export in Swift
@@ -21,7 +21,7 @@ It is a hybrid app today: the UI, set-planning logic, persistence, gap analysis,
 Swift-native (`DeepCrateMac/Sources/DeepCrateMac/`):
 - App shell/navigation/UI
 - Planner orchestration and model routing
-- OpenAI set planner client
+- Local model server planner client
 - Local SQLite service (`LocalDatabase`)
 - Transition scoring and gap analysis
 - Export writers (M3U and Rekordbox XML)
@@ -52,7 +52,8 @@ cp .env.example .env
 
 Notes:
 - `.env` is used by Python bridge flows (for example Spotify discovery and legacy backend config).
-- Planner/API credentials can also be set in-app via `Settings`.
+- Planner settings can also be set in-app via `Settings`.
+- `LOCAL_MODEL_ENDPOINT` should point at a local chat-completions server if you want stronger local planning than the built-in Apple model.
 
 ## Run
 

@@ -14,6 +14,12 @@ enum LocalPlanningError: LocalizedError {
     }
 }
 
+struct PlannerPromptPackage {
+    let targetCount: Int
+    let catalogTracks: [Track]
+    let prompt: String
+}
+
 struct GenreAvailability {
     let interpretedGenres: [String]
     let matchingTrackCount: Int
@@ -311,17 +317,75 @@ struct LocalApplePlanner {
         return Array(reordered.prefix(targetCount))
     }
 
-    func planTrackIDs(description: String, durationMinutes: Int, tracks: [Track]) async throws -> [Int] {
+    func promptPackage(
+        description: String,
+        durationMinutes: Int,
+        tracks: [Track],
+        catalogLimit: Int = 140
+    ) -> PlannerPromptPackage {
         let targetCount = targetTrackCount(durationMinutes: durationMinutes)
         let profiles = inferGenreProfiles(from: description)
-        let genreFiltered = filterTracks(tracks, profiles: profiles)
-        let fallback = fallbackSelection(
-            durationMinutes: durationMinutes,
-            tracks: genreFiltered,
-            description: description,
-            profiles: profiles
+        let filtered = filterTracks(tracks, profiles: profiles)
+        let ranked = filtered.sorted { lhs, rhs in
+            contextRelevance(lhs, profiles: profiles) > contextRelevance(rhs, profiles: profiles)
+        }
+        let catalogTracks = Array(ranked.prefix(max(targetCount * 5, catalogLimit)))
+        let catalog = catalogTracks.map { track in
+            "\(track.id)|\(track.artist)|\(track.title)|\(Int(track.bpm))|\(track.key)|\(String(format: "%.2f", track.energy))"
+        }.joined(separator: "\n")
+
+        var genreGuidance = ""
+        if !profiles.isEmpty {
+            let profileNames = uniqueProfileNames(profiles).prefix(4).joined(separator: ", ")
+            let lowBPM = Int(profiles.map(\.bpmRange.lowerBound).min() ?? 0)
+            let highBPM = Int(profiles.map(\.bpmRange.upperBound).max() ?? 0)
+            let jargonPairs = matchedJargonExpansions(description)
+            let jargonLine: String
+            if jargonPairs.isEmpty {
+                jargonLine = ""
+            } else {
+                jargonLine = "\n- Resolved shorthand: \(jargonPairs.map { "\($0.0)->\($0.1)" }.joined(separator: ", "))"
+            }
+            genreGuidance = """
+            Genre guidance:
+            - Interpreted genres: \(profileNames)
+            - Typical BPM zone: \(lowBPM)-\(highBPM)
+            - Treat DJ jargon and subgenre shorthand as intentional user language.\(jargonLine)
+            """
+        }
+
+        let prompt = """
+        You are sequencing a DJ set from a local music library. Return ONLY strict JSON in this format:
+        {"track_ids":[1,2,3]}
+
+        Rules:
+        - Use only IDs from the catalog.
+        - Preserve musical flow across BPM, key, and energy.
+        - Prefer around \(targetCount) tracks.
+        - Favor playable, coherent transitions over novelty.
+        - No explanation, no markdown, only JSON.
+        \(genreGuidance)
+
+        User request:
+        \(description)
+
+        Catalog:
+        \(catalog)
+        """
+
+        return PlannerPromptPackage(
+            targetCount: targetCount,
+            catalogTracks: catalogTracks,
+            prompt: prompt
         )
-        let trackLookup = Dictionary(uniqueKeysWithValues: genreFiltered.map { ($0.id, $0) })
+    }
+
+    func planTrackIDs(description: String, durationMinutes: Int, tracks: [Track]) async throws -> [Int] {
+        let package = promptPackage(
+            description: description,
+            durationMinutes: durationMinutes,
+            tracks: tracks
+        )
 
 #if canImport(FoundationModels)
         if #available(macOS 26.0, *) {
@@ -330,81 +394,26 @@ struct LocalApplePlanner {
                 throw LocalPlanningError.modelUnavailable
             }
 
-            let catalog = genreFiltered.prefix(300).map { track in
-                "\(track.id)|\(track.artist)|\(track.title)|\(Int(track.bpm))|\(track.key)|\(String(format: "%.2f", track.energy))"
-            }.joined(separator: "\n")
-
-            var genreGuidance = ""
-            if !profiles.isEmpty {
-                let profileNames = uniqueProfileNames(profiles).prefix(4).joined(separator: ", ")
-                let lowBPM = Int(profiles.map(\.bpmRange.lowerBound).min() ?? 0)
-                let highBPM = Int(profiles.map(\.bpmRange.upperBound).max() ?? 0)
-                let jargonPairs = matchedJargonExpansions(description)
-                let jargonLine: String
-                if jargonPairs.isEmpty {
-                    jargonLine = ""
-                } else {
-                    jargonLine = "\n- Resolved shorthand: \(jargonPairs.map { "\($0.0)->\($0.1)" }.joined(separator: ", "))"
-                }
-                genreGuidance = """
-                Genre guidance:
-                - Interpreted genres: \(profileNames)
-                - Typical BPM zone: \(lowBPM)-\(highBPM)
-                - Treat DJ jargon and subgenre shorthand as intentional user language.\(jargonLine)
-                """
-            }
-
-            let prompt = """
-            You are planning a DJ set. Return ONLY strict JSON in this format:
-            {"track_ids":[1,2,3]}
-
-            Rules:
-            - Use only IDs from the catalog.
-            - Preserve musical flow across BPM, key, and energy.
-            - Prefer around \(targetCount) tracks.
-            - No explanation, no markdown, only JSON.
-            \(genreGuidance)
-
-            User request:
-            \(description)
-
-            Catalog:
-            \(catalog)
-            """
-
             let session = LanguageModelSession(model: model)
-            let response = try await session.respond(to: prompt)
-            if let ids = parseIDs(from: response.content), !ids.isEmpty {
-                var valid: [Int] = []
-                for id in ids where trackLookup[id] != nil {
-                    if !valid.contains(id) {
-                        valid.append(id)
-                    }
-                }
-
-                if !valid.isEmpty {
-                    for fallbackID in fallback where !valid.contains(fallbackID) {
-                        valid.append(fallbackID)
-                        if valid.count >= targetCount {
-                            break
-                        }
-                    }
-
-                    let reordered = reorderForFlow(
-                        ids: valid,
-                        lookup: trackLookup,
-                        description: description,
-                        profiles: profiles
-                    )
-                    if !reordered.isEmpty {
-                        return Array(reordered.prefix(targetCount))
-                    }
-                }
+            let response = try await session.respond(to: package.prompt)
+            let ids = parseIDs(from: response.content) ?? []
+            let normalized = normalizePlannedIDs(
+                ids,
+                description: description,
+                durationMinutes: durationMinutes,
+                tracks: tracks
+            )
+            if !normalized.isEmpty {
+                return normalized
             }
         }
 #endif
 
-        return fallback
+        return fallbackPlanTrackIDs(
+            description: description,
+            durationMinutes: durationMinutes,
+            tracks: tracks
+        )
     }
 
     private func fallbackSelection(

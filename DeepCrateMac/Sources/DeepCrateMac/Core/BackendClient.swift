@@ -246,8 +246,6 @@ struct BackendClient {
             .resolveDatabaseURL(configuredPath: UserDefaults.standard.string(forKey: "settings.databasePath"))
             .path
 
-        copyUserDefault("settings.openAIKey", to: "OPENAI_API_KEY", into: &env)
-        copyUserDefault("settings.openAIModel", to: "OPENAI_MODEL", into: &env)
         copyUserDefault("settings.spotifyClientID", to: "SPOTIFY_CLIENT_ID", into: &env)
         copyUserDefault("settings.spotifyClientSecret", to: "SPOTIFY_CLIENT_SECRET", into: &env)
         return env

@@ -22,7 +22,7 @@ The GUI wraps the same core functions as the CLI with tabs for:
 - Playlist export
 
 Use `DeepCrate -> Preferences...` (or `Edit -> Preferences...`) to set:
-- `OPENAI_API_KEY` / model
+- local model server endpoint / model
 - Spotify client ID/secret
 - Database path
 
@@ -69,7 +69,7 @@ This is where the AI comes in. Here's what happens under the hood:
 1. Pulls all your tracks from the database
 2. If you have more than 200 tracks, it pre-filters based on keywords in your description (e.g., if you mention "DnB" it filters to 160-180 BPM) so the list fits in the LLM's context window
 3. Formats your track library into a text list with IDs, artist, title, BPM, key, energy, and duration
-4. Sends that list plus your description to OpenAI (gpt-4o-mini by default) with a system prompt that knows about harmonic mixing, energy flow, and DJ conventions
+4. Sends that list plus your description either to the local model server you configured or to the on-device Apple model, with a system prompt that knows about harmonic mixing, energy flow, and DJ conventions
 5. The LLM picks tracks by ID and orders them
 6. DeepCrate scores every transition (key compatibility, BPM delta, energy flow) and saves the set to the database
 
@@ -128,8 +128,9 @@ DeepCrate uses these rules to score every transition in your set.
 
 All settings live in a `.env` file in the project root:
 
-- `OPENAI_API_KEY` — Required for set planning
-- `OPENAI_MODEL` — Default is `gpt-4o-mini` (cheap and fast). Change to `gpt-4o` if you want better results
+- `LOCAL_MODEL_ENDPOINT` — Optional if you use a local model server for set planning
+- `LOCAL_MODEL_NAME` — The default model name to request from that server
+- `LOCAL_MODEL_TOKEN` — Optional auth token for the local model server
 - `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` — Only needed for the discover command
 - `DATABASE_PATH` — Where the SQLite database lives. Default is `data/deepcrate.sqlite`
 
