@@ -17,7 +17,7 @@ DeepCrate is a Swift-native macOS app for DJs. It scans your library, analyzes B
 - Track preview playback in Library and Sets pages
 - Per-track and bulk reanalysis
 - Manual metadata overrides and review queue
-- AI set planning in Swift (cloud OpenAI or local Apple Foundation Model)
+- AI set planning in Swift (local model server or Apple Foundation Model)
 - DJ-jargon-aware planning (`dnb`, `ukg`, `rollers`, `hardbass`, `afrohouse`, `tropical house`, etc.)
 - Gap analysis in Swift with severity and plain-language guidance
 - Export to M3U/Rekordbox XML
@@ -64,15 +64,18 @@ python3 -m venv .venv
 cp .env.example .env
 ```
 
-Set keys in `.env` as needed:
+Set values in `.env` as needed:
 
 ```env
-OPENAI_API_KEY=sk-...
-OPENAI_MODEL=gpt-4o-mini
+LOCAL_MODEL_ENDPOINT=http://127.0.0.1:8080
+LOCAL_MODEL_NAME=Qwen/Qwen3-8B-Instruct
+LOCAL_MODEL_TOKEN=
 SPOTIFY_CLIENT_ID=...
 SPOTIFY_CLIENT_SECRET=...
 DATABASE_PATH=data/deepcrate.sqlite
 ```
+
+`LOCAL_MODEL_ENDPOINT` should point at a local chat-completions server. Common setups are local servers launched by `llama.cpp`, LM Studio, Ollama-compatible bridges, or similar local wrappers.
 
 ### Run
 

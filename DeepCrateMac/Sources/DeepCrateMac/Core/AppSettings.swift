@@ -3,8 +3,8 @@ import Foundation
 @MainActor
 final class AppSettings: ObservableObject {
     enum PlannerMode: String, CaseIterable, Identifiable {
-        case localApple = "Local Apple Model"
-        case openAI = "OpenAI"
+        case localServer = "Local Model Server"
+        case localApple = "Apple On-Device"
 
         var id: String { rawValue }
     }
@@ -17,11 +17,14 @@ final class AppSettings: ObservableObject {
         var id: String { rawValue }
     }
 
-    @Published var openAIKey: String {
-        didSet { UserDefaults.standard.set(openAIKey, forKey: Keys.openAIKey) }
+    @Published var localModelEndpoint: String {
+        didSet { UserDefaults.standard.set(localModelEndpoint, forKey: Keys.localModelEndpoint) }
     }
-    @Published var openAIModel: String {
-        didSet { UserDefaults.standard.set(openAIModel, forKey: Keys.openAIModel) }
+    @Published var localModelName: String {
+        didSet { UserDefaults.standard.set(localModelName, forKey: Keys.localModelName) }
+    }
+    @Published var localModelToken: String {
+        didSet { UserDefaults.standard.set(localModelToken, forKey: Keys.localModelToken) }
     }
     @Published var spotifyClientID: String {
         didSet { UserDefaults.standard.set(spotifyClientID, forKey: Keys.spotifyClientID) }
@@ -40,14 +43,15 @@ final class AppSettings: ObservableObject {
     }
 
     init() {
-        self.openAIKey = UserDefaults.standard.string(forKey: Keys.openAIKey) ?? ""
-        self.openAIModel = UserDefaults.standard.string(forKey: Keys.openAIModel) ?? "gpt-4o-mini"
+        self.localModelEndpoint = UserDefaults.standard.string(forKey: Keys.localModelEndpoint) ?? "http://127.0.0.1:8080"
+        self.localModelName = UserDefaults.standard.string(forKey: Keys.localModelName) ?? "Qwen/Qwen3-8B-Instruct"
+        self.localModelToken = UserDefaults.standard.string(forKey: Keys.localModelToken) ?? ""
         self.spotifyClientID = UserDefaults.standard.string(forKey: Keys.spotifyClientID) ?? ""
         self.spotifyClientSecret = UserDefaults.standard.string(forKey: Keys.spotifyClientSecret) ?? ""
         self.databasePath = UserDefaults.standard.string(forKey: Keys.databasePath) ?? AppRuntime.defaultDatabaseSettingValue
 
         let storedMode = UserDefaults.standard.string(forKey: Keys.plannerMode)
-        self.plannerMode = PlannerMode(rawValue: storedMode ?? "") ?? .localApple
+        self.plannerMode = PlannerMode(rawValue: storedMode ?? "") ?? .localServer
 
         let storedRisk = UserDefaults.standard.string(forKey: Keys.transitionRiskMode)
         self.transitionRiskMode = TransitionRiskMode(rawValue: storedRisk ?? "") ?? .balanced
@@ -55,8 +59,9 @@ final class AppSettings: ObservableObject {
 }
 
 private enum Keys {
-    static let openAIKey = "settings.openAIKey"
-    static let openAIModel = "settings.openAIModel"
+    static let localModelEndpoint = "settings.localModelEndpoint"
+    static let localModelName = "settings.localModelName"
+    static let localModelToken = "settings.localModelToken"
     static let spotifyClientID = "settings.spotifyClientID"
     static let spotifyClientSecret = "settings.spotifyClientSecret"
     static let databasePath = "settings.databasePath"
