@@ -102,6 +102,7 @@ struct GapSuggestion: Identifiable, Hashable {
     var score: Double
     var suggestedBPM: Double
     var suggestedKey: String
+    var suggestedEnergy: Double
     var weakReason: String
     var bridgeCandidates: [String]
 
@@ -112,6 +113,7 @@ struct GapSuggestion: Identifiable, Hashable {
         score: Double,
         suggestedBPM: Double,
         suggestedKey: String,
+        suggestedEnergy: Double = 0,
         weakReason: String = "",
         bridgeCandidates: [String] = []
     ) {
@@ -121,6 +123,7 @@ struct GapSuggestion: Identifiable, Hashable {
         self.score = score
         self.suggestedBPM = suggestedBPM
         self.suggestedKey = suggestedKey
+        self.suggestedEnergy = suggestedEnergy
         self.weakReason = weakReason
         self.bridgeCandidates = bridgeCandidates
     }
@@ -130,16 +133,46 @@ struct DiscoverSuggestion: Identifiable, Hashable {
     let id: UUID
     var artist: String
     var title: String
+    var album: String
     var bpm: Double
     var energy: Double
+    var artworkURL: String
     var url: String
+    var matchScore: Double
+    var tempoDelta: Double
+    var energyDelta: Double
 
-    init(id: UUID = UUID(), artist: String, title: String, bpm: Double, energy: Double, url: String) {
+    init(
+        id: UUID = UUID(),
+        artist: String,
+        title: String,
+        album: String = "",
+        bpm: Double,
+        energy: Double,
+        artworkURL: String = "",
+        url: String,
+        matchScore: Double = 0,
+        tempoDelta: Double = 0,
+        energyDelta: Double = 0
+    ) {
         self.id = id
         self.artist = artist
         self.title = title
+        self.album = album
         self.bpm = bpm
         self.energy = energy
+        self.artworkURL = artworkURL
         self.url = url
+        self.matchScore = matchScore
+        self.tempoDelta = tempoDelta
+        self.energyDelta = energyDelta
     }
+}
+
+struct DeleteTracksSummary: Equatable {
+    let requested: Int
+    let deleted: Int
+    let missing: Int
+    let removedFromSets: Int
+    let clearedGapSets: Int
 }

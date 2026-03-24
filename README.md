@@ -5,10 +5,9 @@ DeepCrate is a Swift-native macOS app for DJs. It scans your library, analyzes B
 ## Status
 
 - Primary product: **Swift app** in `DeepCrateMac/`
-- Hybrid runtime:
-  - Swift-native services for scan/import, audio analysis, reanalysis, set planning orchestration, set persistence, gap analysis, and export
-  - Python bridge (`deepcrate/mac_bridge.py`) only used for Spotify discovery
+- App runtime: fully Swift-native for scan/import, audio analysis, reanalysis, set planning orchestration, gap analysis, discovery, persistence, and export
 - Legacy Python GUI: kept for compatibility, no longer the primary UI
+- Legacy Python modules: kept for compatibility, CLI usage, and regression testing
 
 ## What Works Today
 
@@ -20,6 +19,7 @@ DeepCrate is a Swift-native macOS app for DJs. It scans your library, analyzes B
 - AI set planning in Swift (local model server or Apple Foundation Model)
 - DJ-jargon-aware planning (`dnb`, `ukg`, `rollers`, `hardbass`, `afrohouse`, `tropical house`, etc.)
 - Gap analysis in Swift with severity and plain-language guidance
+- Native Spotify discovery ranked against the selected gap target
 - Export to M3U/Rekordbox XML
 
 ## Usage Walkthrough
@@ -52,15 +52,13 @@ When you're happy with the set, export to M3U (works with most players) or Rekor
 
 - macOS 14+
 - Xcode Command Line Tools
-- Python 3.12 (for current backend bridge)
+- Python 3.12 only if you want to run legacy CLI flows or Python tests
 
 ### Setup
 
 ```bash
 git clone https://github.com/fungiblemoose/DeepCrate.git
 cd DeepCrate
-python3 -m venv .venv
-.venv/bin/pip install -e .
 cp .env.example .env
 ```
 
@@ -76,6 +74,15 @@ DATABASE_PATH=data/deepcrate.sqlite
 ```
 
 `LOCAL_MODEL_ENDPOINT` should point at a local chat-completions server. Common setups are local servers launched by `llama.cpp`, LM Studio, Ollama-compatible bridges, or similar local wrappers.
+
+These values act as first-run defaults. Once you save settings in the app, the in-app values take precedence.
+
+### Optional: Legacy Python/Test Environment
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -e .
+```
 
 ### Run
 
@@ -98,6 +105,7 @@ swift build
 ```
 
 The generated `.dmg` can be attached to a GitHub Release and includes an `Applications` shortcut for drag-and-drop install.
+The packaged app no longer embeds a Python runtime.
 
 ## Planner Behavior
 
@@ -107,8 +115,7 @@ The generated `.dmg` can be attached to a GitHub Release and includes an `Applic
 
 ## Architecture (Current)
 
-- `DeepCrateMac/`: SwiftUI app, native scan/reanalysis, planner + gap services, AVFoundation preview player, SQLite access for tracks/sets/gaps/export
-- `deepcrate/mac_bridge.py`: command bridge still used by discovery
+- `DeepCrateMac/`: SwiftUI app, native scan/reanalysis, planner + gap services, native Spotify discovery, AVFoundation preview player, SQLite access for tracks/sets/gaps/export
 - `deepcrate/analysis/`: legacy Python audio analysis kept for compatibility
 - `deepcrate/planning/`: legacy Python planning/scoring kept for compatibility
 - `deepcrate/db.py`: SQLite persistence
@@ -117,9 +124,9 @@ The generated `.dmg` can be attached to a GitHub Release and includes an `Applic
 
 1. Keep Swift UI as source of truth (done).
 2. Keep SQLite and app-facing workflows owned by Swift (done for Library, Sets, Gaps, Export, and planning).
-3. Replace the remaining discovery bridge with a Swift-native client or make discovery an optional legacy feature.
-4. Remove the Python runtime dependency from app startup/build packaging.
-5. Decide whether to retire or freeze the legacy Python GUI/CLI in maintenance mode.
+3. Remove the Python runtime dependency from app startup/build packaging (done).
+4. Decide whether to retire or freeze the legacy Python GUI/CLI in maintenance mode.
+5. Improve planner evaluation, discovery ranking, and local-model UX polish.
 
 ## Developer Commands
 
@@ -144,7 +151,7 @@ cd DeepCrate
 DeepCrateMac/                 Swift app (primary UI)
 deepcrate/analysis/           Python audio analysis
 deepcrate/planning/           Python planning + scoring (legacy/bridge compatibility)
-deepcrate/mac_bridge.py       Swift <-> Python bridge
+deepcrate/mac_bridge.py       Legacy Swift <-> Python bridge shim
 deepcrate/db.py               SQLite layer
 tests/                        Python tests
 ```

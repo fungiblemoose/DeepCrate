@@ -2,7 +2,7 @@
 
 DeepCrateMac is the primary macOS app for DeepCrate.
 
-It is a hybrid app today: the UI, scan/import analysis, reanalysis, set-planning logic, persistence, gap analysis, and export are Swift-native, while Spotify discovery still runs through the Python bridge.
+It is now a Swift-native macOS app at runtime. Scan/import analysis, reanalysis, set planning, persistence, gap analysis, Spotify discovery, and export all run inside the app.
 
 ## Current Status
 
@@ -13,10 +13,11 @@ It is a hybrid app today: the UI, scan/import analysis, reanalysis, set-planning
   - Local Apple Foundation Models planner
   - Local model server planner via chat-completions HTTP
 - SQLite reads/writes for tracks, sets, set tracks, and gaps in Swift
+- Spotify discovery in Swift using the Spotify Web API
 - Gap analysis + severity labeling in Swift
 - M3U/Rekordbox export in Swift
 
-## Architecture Split (What Runs Where)
+## Architecture
 
 Swift-native (`DeepCrateMac/Sources/DeepCrateMac/`):
 - App shell/navigation/UI
@@ -24,20 +25,21 @@ Swift-native (`DeepCrateMac/Sources/DeepCrateMac/`):
 - Native audio analysis pipeline (BPM/key/energy/preview cue)
 - Planner orchestration and model routing
 - Local model server planner client
+- Native Spotify discovery client
 - Local SQLite service (`LocalDatabase`)
 - Transition scoring and gap analysis
 - Export writers (M3U and Rekordbox XML)
 - Audio preview playback
 
-Python bridge (`deepcrate/mac_bridge.py`):
-- Spotify discovery suggestions
+Legacy Python repo components:
+- Compatibility CLI / GUI code
+- Older analysis / planning modules kept for testing or comparison
 
 ## Requirements
 
 - macOS 14+
 - Xcode Command Line Tools
 - Swift toolchain supporting this package (`swift-tools-version: 6.2`)
-- Python 3.12
 
 ## Setup
 
@@ -45,19 +47,24 @@ From repo root:
 
 ```bash
 cd /Users/jacksoneaker/Projects/DeepCrate
-python3 -m venv .venv
-./.venv/bin/pip install -e .
 cp .env.example .env
 ```
 
 Notes:
-- `.env` is used by Python bridge flows (for example Spotify discovery and legacy backend config).
-- Planner settings can also be set in-app via `Settings`.
+- `.env` can seed first-run planner/discovery/database settings.
+- Values saved in-app via `Settings` take precedence over `.env`.
 - `LOCAL_MODEL_ENDPOINT` should point at a local chat-completions server if you want stronger local planning than the built-in Apple model.
+
+Optional if you want to run legacy Python tooling or Python tests:
+
+```bash
+python3 -m venv .venv
+./.venv/bin/pip install -e .
+```
 
 ## Run
 
-Run from the `DeepCrateMac` directory so bridge paths resolve correctly:
+Run from the `DeepCrateMac` directory during development so relative project paths resolve predictably:
 
 ```bash
 cd /Users/jacksoneaker/Projects/DeepCrate/DeepCrateMac
@@ -94,6 +101,7 @@ Optional signing/notarization environment variables:
 GitHub Actions workflow:
 
 - `.github/workflows/release-macos.yml` builds the macOS bundle on tag pushes (`v*`) and uploads the DMG/ZIP to the release.
+- The packaged app does not embed a Python runtime anymore.
 
 ## Licensing
 

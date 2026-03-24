@@ -16,29 +16,15 @@ ARCH_NAME="$(uname -m)"
 BUNDLE_ID="${DEEPCRATE_BUNDLE_ID:-com.fungiblemoose.deepcrate}"
 ICON_BASENAME="DeepCrate"
 
-PYTHON_BIN="${DEEPCRATE_PYTHON_BIN:-}"
-if [[ -z "$PYTHON_BIN" ]]; then
-  if command -v python3.12 >/dev/null 2>&1; then
-    PYTHON_BIN="$(command -v python3.12)"
-  else
-    PYTHON_BIN="$(command -v python3)"
-  fi
-fi
-
 read_version() {
   if [[ -n "${DEEPCRATE_VERSION:-}" ]]; then
     printf '%s' "$DEEPCRATE_VERSION"
     return
   fi
 
-  "$PYTHON_BIN" - <<'PY'
-from pathlib import Path
-import re
-
-content = Path("pyproject.toml").read_text(encoding="utf-8")
-match = re.search(r'^\s*version\s*=\s*"([^"]+)"\s*$', content, re.MULTILINE)
-print(match.group(1) if match else "0.0.0")
-PY
+  local version
+  version="$(awk -F'"' '/^[[:space:]]*version[[:space:]]*=/ {print $2; exit}' "$ROOT_DIR/pyproject.toml")"
+  printf '%s' "${version:-0.0.0}"
 }
 
 VERSION="$(cd "$ROOT_DIR" && read_version)"
@@ -47,7 +33,6 @@ APP_BUNDLE="$STAGE_DIR/$APP_NAME.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
-RUNTIME_DIR="$RESOURCES_DIR/DeepCrateRuntime"
 DMG_STAGING_DIR="$STAGE_DIR/dmg"
 
 DMG_NAME="$APP_NAME-$VERSION-macOS-$ARCH_NAME.dmg"
@@ -63,7 +48,6 @@ require_cmd() {
 }
 
 require_cmd swift
-require_cmd "$PYTHON_BIN"
 require_cmd hdiutil
 require_cmd ditto
 
@@ -125,31 +109,14 @@ PLIST
 cat > "$RESOURCES_DIR/PackagingNotes.txt" <<'TXT'
 DeepCrate bundle notes
 
-- The embedded Python bridge uses a bundled virtual environment under
-  Contents/Resources/DeepCrateRuntime/.venv.
 - User data and the default database path resolve to:
   ~/Library/Application Support/DeepCrate/data/deepcrate.sqlite
-- API keys can be set in-app (Settings) and are forwarded to the bridge.
+- Planner and Spotify settings can be set in-app (Settings).
 TXT
 
 if [[ -f "$ROOT_DIR/.env.example" ]]; then
   cp "$ROOT_DIR/.env.example" "$RESOURCES_DIR/.env.example"
 fi
-
-echo "Creating embedded Python runtime..."
-"$PYTHON_BIN" -m venv --copies "$RUNTIME_DIR/.venv"
-"$RUNTIME_DIR/.venv/bin/python3" -m pip install --upgrade pip setuptools wheel
-"$RUNTIME_DIR/.venv/bin/python3" -m pip install --no-deps "$ROOT_DIR"
-"$RUNTIME_DIR/.venv/bin/python3" -m pip install \
-  "rich>=13.0.0" \
-  "librosa>=0.10.0" \
-  "soundfile>=0.12.0" \
-  "mutagen>=1.47.0" \
-  "openai>=1.0.0" \
-  "spotipy>=2.23.0" \
-  "pydantic-settings>=2.0.0" \
-  "aiosqlite>=0.19.0" \
-  "numpy>=1.26.0"
 
 if [[ -n "${DEEPCRATE_CODESIGN_IDENTITY:-}" ]]; then
   require_cmd codesign

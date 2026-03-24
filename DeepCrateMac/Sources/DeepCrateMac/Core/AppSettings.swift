@@ -43,18 +43,46 @@ final class AppSettings: ObservableObject {
     }
 
     init() {
-        self.localModelEndpoint = UserDefaults.standard.string(forKey: Keys.localModelEndpoint) ?? "http://127.0.0.1:8080"
-        self.localModelName = UserDefaults.standard.string(forKey: Keys.localModelName) ?? "Qwen/Qwen3-8B-Instruct"
-        self.localModelToken = UserDefaults.standard.string(forKey: Keys.localModelToken) ?? ""
-        self.spotifyClientID = UserDefaults.standard.string(forKey: Keys.spotifyClientID) ?? ""
-        self.spotifyClientSecret = UserDefaults.standard.string(forKey: Keys.spotifyClientSecret) ?? ""
-        self.databasePath = UserDefaults.standard.string(forKey: Keys.databasePath) ?? AppRuntime.defaultDatabaseSettingValue
+        self.localModelEndpoint = UserDefaults.standard.string(forKey: Keys.localModelEndpoint)
+            ?? AppSettings.envValue("LOCAL_MODEL_ENDPOINT")
+            ?? "http://127.0.0.1:8080"
+        self.localModelName = UserDefaults.standard.string(forKey: Keys.localModelName)
+            ?? AppSettings.envValue("LOCAL_MODEL_NAME")
+            ?? "Qwen/Qwen3-8B-Instruct"
+        self.localModelToken = UserDefaults.standard.string(forKey: Keys.localModelToken)
+            ?? AppSettings.envValue("LOCAL_MODEL_TOKEN")
+            ?? ""
+        self.spotifyClientID = UserDefaults.standard.string(forKey: Keys.spotifyClientID)
+            ?? AppSettings.envValue("SPOTIFY_CLIENT_ID")
+            ?? ""
+        self.spotifyClientSecret = UserDefaults.standard.string(forKey: Keys.spotifyClientSecret)
+            ?? AppSettings.envValue("SPOTIFY_CLIENT_SECRET")
+            ?? ""
+        self.databasePath = UserDefaults.standard.string(forKey: Keys.databasePath)
+            ?? AppSettings.envValue("DATABASE_PATH")
+            ?? AppRuntime.defaultDatabaseSettingValue
 
         let storedMode = UserDefaults.standard.string(forKey: Keys.plannerMode)
         self.plannerMode = PlannerMode(rawValue: storedMode ?? "") ?? .localServer
 
         let storedRisk = UserDefaults.standard.string(forKey: Keys.transitionRiskMode)
         self.transitionRiskMode = TransitionRiskMode(rawValue: storedRisk ?? "") ?? .balanced
+    }
+
+    private static func envValue(_ key: String) -> String? {
+        for envURL in AppRuntime.envFileCandidates {
+            guard let content = try? String(contentsOf: envURL, encoding: .utf8) else { continue }
+            for line in content.split(separator: "\n") {
+                let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty || trimmed.hasPrefix("#") { continue }
+                let parts = trimmed.split(separator: "=", maxSplits: 1).map(String.init)
+                if parts.count == 2,
+                   parts[0].trimmingCharacters(in: .whitespacesAndNewlines) == key {
+                    return parts[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+            }
+        }
+        return nil
     }
 }
 
