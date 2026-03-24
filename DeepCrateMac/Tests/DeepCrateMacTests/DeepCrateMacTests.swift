@@ -91,6 +91,30 @@ final class DeepCrateMacTests: XCTestCase {
             try seedSetTrack(dbURL: dbURL, setID: 1, trackID: 2, position: 2, score: 0.82)
             try seedGap(dbURL: dbURL, setID: 1, position: 1)
             try seedOverride(dbURL: dbURL, filePath: "/tmp/delete-me.mp3", bpm: 127.5, key: "8A", energy: 0.5)
+            _ = try LocalDatabase.shared.saveBridgePick(
+                setID: 1,
+                gapPosition: 1,
+                gap: GapSuggestion(
+                    fromTrack: "DJ Alpha - Delete Me",
+                    toTrack: "DJ Beta - Keep Me",
+                    score: 0.31,
+                    suggestedBPM: 128.5,
+                    suggestedKey: "8A",
+                    suggestedEnergy: 0.54
+                ),
+                suggestion: DiscoverSuggestion(
+                    artist: "Bridge Artist",
+                    title: "Bridge Track",
+                    album: "Bridge Album",
+                    bpm: 128.4,
+                    energy: 0.55,
+                    artworkURL: "https://example.com/art.jpg",
+                    url: "https://open.spotify.com/track/delete-bridge",
+                    matchScore: 0.83,
+                    tempoDelta: 0.1,
+                    energyDelta: 0.01
+                )
+            )
 
             let summary = try LocalDatabase.shared.deleteTracks(trackIDs: [1])
 
@@ -103,7 +127,86 @@ final class DeepCrateMacTests: XCTestCase {
             XCTAssertEqual(try countRows(dbURL: dbURL, table: "tracks"), 1)
             XCTAssertEqual(try countRows(dbURL: dbURL, table: "set_tracks"), 1)
             XCTAssertEqual(try countRows(dbURL: dbURL, table: "gaps"), 0)
+            XCTAssertEqual(try countRows(dbURL: dbURL, table: "saved_bridge_picks"), 0)
             XCTAssertEqual(try countRows(dbURL: dbURL, table: "track_overrides"), 0)
+        }
+    }
+
+    func testSavedBridgePickPersistsStateAndDeduplicatesOnResave() throws {
+        try withTemporaryDatabase { dbURL in
+            try bootstrapDatabase()
+            try seedSet(dbURL: dbURL, id: 1, name: "Bridge Picks", description: "Test", duration: 60)
+
+            let gap = GapSuggestion(
+                fromTrack: "DJ Alpha - Intro Roller",
+                toTrack: "DJ Beta - Peak Roller",
+                score: 0.28,
+                suggestedBPM: 174.0,
+                suggestedKey: "9A",
+                suggestedEnergy: 0.71
+            )
+
+            let first = try LocalDatabase.shared.saveBridgePick(
+                setID: 1,
+                gapPosition: 1,
+                gap: gap,
+                suggestion: DiscoverSuggestion(
+                    artist: "Bridge Artist",
+                    title: "First Pass",
+                    album: "Original Album",
+                    bpm: 174.2,
+                    energy: 0.69,
+                    artworkURL: "https://example.com/original.jpg",
+                    url: "https://open.spotify.com/track/bridge-pick",
+                    matchScore: 0.81,
+                    tempoDelta: 0.2,
+                    energyDelta: 0.02
+                )
+            )
+            XCTAssertEqual(first.state, .saved)
+
+            let prioritized = try LocalDatabase.shared.updateSavedBridgePickState(
+                pickID: first.id,
+                state: .priority
+            )
+            XCTAssertEqual(prioritized.state, .priority)
+
+            _ = try LocalDatabase.shared.saveBridgePick(
+                setID: 1,
+                gapPosition: 1,
+                gap: gap,
+                suggestion: DiscoverSuggestion(
+                    artist: "Bridge Artist",
+                    title: "First Pass",
+                    album: "Refined Album",
+                    bpm: 174.0,
+                    energy: 0.7,
+                    artworkURL: "https://example.com/refined.jpg",
+                    url: "https://open.spotify.com/track/bridge-pick",
+                    matchScore: 0.93,
+                    tempoDelta: 0.0,
+                    energyDelta: 0.01
+                )
+            )
+
+            let picks = try LocalDatabase.shared.savedBridgePicks(
+                setID: 1,
+                fromTrack: gap.fromTrack,
+                toTrack: gap.toTrack
+            )
+            XCTAssertEqual(picks.count, 1)
+            XCTAssertEqual(picks[0].state, .priority)
+            XCTAssertEqual(picks[0].album, "Refined Album")
+            XCTAssertEqual(picks[0].matchScore, 0.93, accuracy: 0.001)
+
+            try LocalDatabase.shared.deleteSavedBridgePick(pickID: picks[0].id)
+            XCTAssertTrue(
+                try LocalDatabase.shared.savedBridgePicks(
+                    setID: 1,
+                    fromTrack: gap.fromTrack,
+                    toTrack: gap.toTrack
+                ).isEmpty
+            )
         }
     }
 

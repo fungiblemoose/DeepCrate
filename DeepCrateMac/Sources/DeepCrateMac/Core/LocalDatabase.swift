@@ -74,6 +74,34 @@ CREATE TABLE IF NOT EXISTS track_overrides (
     energy_level REAL,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS saved_bridge_picks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    set_id INTEGER NOT NULL,
+    gap_position INTEGER NOT NULL,
+    from_track TEXT NOT NULL,
+    to_track TEXT NOT NULL,
+    target_bpm REAL DEFAULT 0.0,
+    target_key TEXT DEFAULT '',
+    target_energy REAL DEFAULT 0.0,
+    artist TEXT DEFAULT '',
+    title TEXT DEFAULT '',
+    album TEXT DEFAULT '',
+    bpm REAL DEFAULT 0.0,
+    energy REAL DEFAULT 0.0,
+    artwork_url TEXT DEFAULT '',
+    spotify_url TEXT NOT NULL,
+    match_score REAL DEFAULT 0.0,
+    tempo_delta REAL DEFAULT 0.0,
+    energy_delta REAL DEFAULT 0.0,
+    state TEXT DEFAULT 'saved',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(set_id, from_track, to_track, spotify_url)
+);
+
+CREATE INDEX IF NOT EXISTS idx_saved_bridge_picks_lookup
+ON saved_bridge_picks(set_id, from_track, to_track);
 """
 
 final class LocalDatabase: @unchecked Sendable {
@@ -440,6 +468,15 @@ final class LocalDatabase: @unchecked Sendable {
                             }
                         }
                     )
+                    try exec(
+                        db: db,
+                        sql: "DELETE FROM saved_bridge_picks WHERE set_id IN (\(gapPlaceholders))",
+                        bindings: { stmt in
+                            for (offset, value) in affectedSetIDs.enumerated() {
+                                self.bindInt(stmt, index: Int32(offset + 1), value: value)
+                            }
+                        }
+                    )
                 }
 
                 if !filePaths.isEmpty {
@@ -586,6 +623,7 @@ final class LocalDatabase: @unchecked Sendable {
                 if let existingID = try setID(db: db, name: name) {
                     try exec(db: db, sql: "DELETE FROM set_tracks WHERE set_id = ?", bindings: { self.bindInt($0, index: 1, value: existingID) })
                     try exec(db: db, sql: "DELETE FROM gaps WHERE set_id = ?", bindings: { self.bindInt($0, index: 1, value: existingID) })
+                    try exec(db: db, sql: "DELETE FROM saved_bridge_picks WHERE set_id = ?", bindings: { self.bindInt($0, index: 1, value: existingID) })
                     try exec(db: db, sql: "DELETE FROM sets WHERE id = ?", bindings: { self.bindInt($0, index: 1, value: existingID) })
                 }
 
@@ -715,6 +753,164 @@ final class LocalDatabase: @unchecked Sendable {
         }
     }
 
+    func savedBridgePicks(setID: Int, fromTrack: String, toTrack: String) throws -> [SavedBridgePick] {
+        let normalizedFrom = fromTrack.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedTo = toTrack.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedFrom.isEmpty, !normalizedTo.isEmpty else {
+            return []
+        }
+
+        return try withConnection { db in
+            let stmt = try prepare(
+                db: db,
+                sql: """
+                SELECT id, set_id, gap_position, from_track, to_track, target_bpm, target_key, target_energy,
+                       artist, title, album, bpm, energy, artwork_url, spotify_url, match_score, tempo_delta,
+                       energy_delta, state, updated_at
+                FROM saved_bridge_picks
+                WHERE set_id = ? AND from_track = ? AND to_track = ?
+                ORDER BY
+                    CASE state
+                        WHEN 'priority' THEN 0
+                        WHEN 'saved' THEN 1
+                        WHEN 'acquired' THEN 2
+                        ELSE 3
+                    END,
+                    match_score DESC,
+                    updated_at DESC,
+                    artist COLLATE NOCASE,
+                    title COLLATE NOCASE
+                """
+            )
+            defer { sqlite3_finalize(stmt) }
+            bindInt(stmt, index: 1, value: setID)
+            bindText(stmt, index: 2, value: normalizedFrom)
+            bindText(stmt, index: 3, value: normalizedTo)
+
+            var rows: [SavedBridgePick] = []
+            while sqlite3_step(stmt) == SQLITE_ROW {
+                rows.append(savedBridgePickFromRow(stmt))
+            }
+            return rows
+        }
+    }
+
+    func saveBridgePick(
+        setID: Int,
+        gapPosition: Int,
+        gap: GapSuggestion,
+        suggestion: DiscoverSuggestion
+    ) throws -> SavedBridgePick {
+        guard gapPosition > 0 else {
+            throw LocalDatabaseError.invalidInput("Gap position must be greater than zero.")
+        }
+
+        let normalizedFrom = gap.fromTrack.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedTo = gap.toTrack.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedURL = suggestion.url.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !normalizedFrom.isEmpty, !normalizedTo.isEmpty else {
+            throw LocalDatabaseError.invalidInput("Gap details are missing.")
+        }
+        guard !normalizedURL.isEmpty else {
+            throw LocalDatabaseError.invalidInput("Spotify URL is required to save a bridge pick.")
+        }
+
+        return try withConnection { db in
+            guard try setExists(db: db, id: setID) else {
+                throw LocalDatabaseError.sqlite("Set not found: \(setID)")
+            }
+
+            try exec(
+                db: db,
+                sql: """
+                INSERT INTO saved_bridge_picks (
+                    set_id, gap_position, from_track, to_track, target_bpm, target_key, target_energy,
+                    artist, title, album, bpm, energy, artwork_url, spotify_url, match_score, tempo_delta,
+                    energy_delta, state, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'saved', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT(set_id, from_track, to_track, spotify_url) DO UPDATE SET
+                    gap_position = excluded.gap_position,
+                    target_bpm = excluded.target_bpm,
+                    target_key = excluded.target_key,
+                    target_energy = excluded.target_energy,
+                    artist = excluded.artist,
+                    title = excluded.title,
+                    album = excluded.album,
+                    bpm = excluded.bpm,
+                    energy = excluded.energy,
+                    artwork_url = excluded.artwork_url,
+                    match_score = excluded.match_score,
+                    tempo_delta = excluded.tempo_delta,
+                    energy_delta = excluded.energy_delta,
+                    updated_at = CURRENT_TIMESTAMP
+                """,
+                bindings: {
+                    self.bindInt($0, index: 1, value: setID)
+                    self.bindInt($0, index: 2, value: gapPosition)
+                    self.bindText($0, index: 3, value: normalizedFrom)
+                    self.bindText($0, index: 4, value: normalizedTo)
+                    self.bindDouble($0, index: 5, value: gap.suggestedBPM)
+                    self.bindText($0, index: 6, value: gap.suggestedKey)
+                    self.bindDouble($0, index: 7, value: gap.suggestedEnergy)
+                    self.bindText($0, index: 8, value: suggestion.artist)
+                    self.bindText($0, index: 9, value: suggestion.title)
+                    self.bindText($0, index: 10, value: suggestion.album)
+                    self.bindDouble($0, index: 11, value: suggestion.bpm)
+                    self.bindDouble($0, index: 12, value: suggestion.energy)
+                    self.bindText($0, index: 13, value: suggestion.artworkURL)
+                    self.bindText($0, index: 14, value: normalizedURL)
+                    self.bindDouble($0, index: 15, value: suggestion.matchScore)
+                    self.bindDouble($0, index: 16, value: suggestion.tempoDelta)
+                    self.bindDouble($0, index: 17, value: suggestion.energyDelta)
+                }
+            )
+
+            guard let saved = try savedBridgePick(
+                db: db,
+                setID: setID,
+                fromTrack: normalizedFrom,
+                toTrack: normalizedTo,
+                spotifyURL: normalizedURL
+            ) else {
+                throw LocalDatabaseError.sqlite("Bridge pick not found after save.")
+            }
+            return saved
+        }
+    }
+
+    func updateSavedBridgePickState(pickID: Int, state: SavedBridgePickState) throws -> SavedBridgePick {
+        try withConnection { db in
+            try exec(
+                db: db,
+                sql: """
+                UPDATE saved_bridge_picks
+                SET state = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                bindings: {
+                    self.bindText($0, index: 1, value: state.rawValue)
+                    self.bindInt($0, index: 2, value: pickID)
+                }
+            )
+
+            guard let saved = try savedBridgePickByID(db: db, id: pickID) else {
+                throw LocalDatabaseError.sqlite("Saved bridge pick not found: \(pickID)")
+            }
+            return saved
+        }
+    }
+
+    func deleteSavedBridgePick(pickID: Int) throws {
+        try withConnection { db in
+            try exec(
+                db: db,
+                sql: "DELETE FROM saved_bridge_picks WHERE id = ?",
+                bindings: { self.bindInt($0, index: 1, value: pickID) }
+            )
+        }
+    }
+
     private func withConnection<T>(_ block: (OpaquePointer) throws -> T) throws -> T {
         var db: OpaquePointer?
         let dbURL = resolvedDatabaseURL()
@@ -772,6 +968,13 @@ final class LocalDatabase: @unchecked Sendable {
             return intColumn(stmt, 0)
         }
         return nil
+    }
+
+    private func setExists(db: OpaquePointer, id: Int) throws -> Bool {
+        let stmt = try prepare(db: db, sql: "SELECT 1 FROM sets WHERE id = ? LIMIT 1")
+        defer { sqlite3_finalize(stmt) }
+        bindInt(stmt, index: 1, value: id)
+        return sqlite3_step(stmt) == SQLITE_ROW
     }
 
     private func tracksForSet(db: OpaquePointer, setID: Int) throws -> [Track] {
@@ -835,6 +1038,55 @@ final class LocalDatabase: @unchecked Sendable {
 
     private func trackByID(db: OpaquePointer, id: Int) throws -> Track? {
         try storedTrackRecordByID(db: db, id: id)?.asTrack
+    }
+
+    private func savedBridgePickByID(db: OpaquePointer, id: Int) throws -> SavedBridgePick? {
+        let stmt = try prepare(
+            db: db,
+            sql: """
+            SELECT id, set_id, gap_position, from_track, to_track, target_bpm, target_key, target_energy,
+                   artist, title, album, bpm, energy, artwork_url, spotify_url, match_score, tempo_delta,
+                   energy_delta, state, updated_at
+            FROM saved_bridge_picks
+            WHERE id = ?
+            LIMIT 1
+            """
+        )
+        defer { sqlite3_finalize(stmt) }
+        bindInt(stmt, index: 1, value: id)
+        guard sqlite3_step(stmt) == SQLITE_ROW else {
+            return nil
+        }
+        return savedBridgePickFromRow(stmt)
+    }
+
+    private func savedBridgePick(
+        db: OpaquePointer,
+        setID: Int,
+        fromTrack: String,
+        toTrack: String,
+        spotifyURL: String
+    ) throws -> SavedBridgePick? {
+        let stmt = try prepare(
+            db: db,
+            sql: """
+            SELECT id, set_id, gap_position, from_track, to_track, target_bpm, target_key, target_energy,
+                   artist, title, album, bpm, energy, artwork_url, spotify_url, match_score, tempo_delta,
+                   energy_delta, state, updated_at
+            FROM saved_bridge_picks
+            WHERE set_id = ? AND from_track = ? AND to_track = ? AND spotify_url = ?
+            LIMIT 1
+            """
+        )
+        defer { sqlite3_finalize(stmt) }
+        bindInt(stmt, index: 1, value: setID)
+        bindText(stmt, index: 2, value: fromTrack)
+        bindText(stmt, index: 3, value: toTrack)
+        bindText(stmt, index: 4, value: spotifyURL)
+        guard sqlite3_step(stmt) == SQLITE_ROW else {
+            return nil
+        }
+        return savedBridgePickFromRow(stmt)
     }
 
     private func prepare(db: OpaquePointer, sql: String) throws -> OpaquePointer {
@@ -1015,6 +1267,32 @@ final class LocalDatabase: @unchecked Sendable {
 
     private func trackFromLibraryRow(_ stmt: OpaquePointer) -> Track {
         storedTrackRecordFromLibraryRow(stmt).asTrack
+    }
+
+    private func savedBridgePickFromRow(_ stmt: OpaquePointer) -> SavedBridgePick {
+        let stateValue = textColumn(stmt, 18)
+        return SavedBridgePick(
+            id: intColumn(stmt, 0),
+            setID: intColumn(stmt, 1),
+            gapPosition: intColumn(stmt, 2),
+            fromTrack: textColumn(stmt, 3),
+            toTrack: textColumn(stmt, 4),
+            targetBPM: doubleColumn(stmt, 5),
+            targetKey: textColumn(stmt, 6),
+            targetEnergy: doubleColumn(stmt, 7),
+            artist: nonEmpty(textColumn(stmt, 8), fallback: "Unknown Artist"),
+            title: displayTitle(title: textColumn(stmt, 9), filePath: ""),
+            album: textColumn(stmt, 10),
+            bpm: doubleColumn(stmt, 11),
+            energy: doubleColumn(stmt, 12),
+            artworkURL: textColumn(stmt, 13),
+            url: textColumn(stmt, 14),
+            matchScore: doubleColumn(stmt, 15),
+            tempoDelta: doubleColumn(stmt, 16),
+            energyDelta: doubleColumn(stmt, 17),
+            state: SavedBridgePickState(rawValue: stateValue) ?? .saved,
+            updatedAt: textColumn(stmt, 19)
+        )
     }
 
     private func storedTrackRecordByID(db: OpaquePointer, id: Int) throws -> StoredTrackRecord? {

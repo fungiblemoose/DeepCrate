@@ -169,6 +169,59 @@ struct DiscoverSuggestion: Identifiable, Hashable {
     }
 }
 
+enum SavedBridgePickState: String, CaseIterable, Hashable, Identifiable {
+    case saved
+    case priority
+    case acquired
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .saved:
+            return "Saved"
+        case .priority:
+            return "Priority"
+        case .acquired:
+            return "Acquired"
+        }
+    }
+
+    var sortRank: Int {
+        switch self {
+        case .priority:
+            return 0
+        case .saved:
+            return 1
+        case .acquired:
+            return 2
+        }
+    }
+}
+
+struct SavedBridgePick: Identifiable, Hashable {
+    let id: Int
+    var setID: Int
+    var gapPosition: Int
+    var fromTrack: String
+    var toTrack: String
+    var targetBPM: Double
+    var targetKey: String
+    var targetEnergy: Double
+    var artist: String
+    var title: String
+    var album: String
+    var bpm: Double
+    var energy: Double
+    var artworkURL: String
+    var url: String
+    var matchScore: Double
+    var tempoDelta: Double
+    var energyDelta: Double
+    var state: SavedBridgePickState
+    var updatedAt: String
+}
+
 struct DeleteTracksSummary: Equatable {
     let requested: Int
     let deleted: Int
