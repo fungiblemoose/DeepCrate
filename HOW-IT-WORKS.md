@@ -77,9 +77,9 @@ The `Gaps` page looks at every transition and flags the ones below a 50% compati
 
 ### 6. Discovering New Tracks
 
-The `Discover` page takes a gap identified in the previous step and searches Spotify for tracks that match the suggested BPM, key, and energy. It auto-doubles BPM for DnB tracks when Spotify reports half-time values and returns track names, artists, BPM, energy, and Spotify links.
+The `Discover` page takes a gap identified in the previous step and searches Spotify for tracks that match the suggested BPM, key, and energy. It auto-doubles BPM for DnB tracks when Spotify reports half-time values, ranks candidates by fit, and returns track names, artists, BPM, energy, and Spotify links.
 
-This requires Spotify API credentials in your `.env` file.
+This requires Spotify API credentials in `Settings`, or in `.env` as a first-run fallback.
 
 ### 7. Exporting
 
@@ -103,17 +103,16 @@ DeepCrate uses these rules to score every transition in your set.
 
 ## Configuration
 
-Bridge settings and service credentials can live in a `.env` file in the project root, and planner settings can also be edited in-app:
+App settings can be edited in-app, and `.env` can provide first-run defaults:
 
 - `LOCAL_MODEL_ENDPOINT` — Optional if you use a local model server for set planning
 - `LOCAL_MODEL_NAME` — The default model name to request from that server
 - `LOCAL_MODEL_TOKEN` — Optional auth token for the local model server
-- `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` — Only needed for the discover command
+- `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` — Only needed for the Discover page
 - `DATABASE_PATH` — Where the SQLite database lives. Default is `data/deepcrate.sqlite`
 
 ## Limitations
 
-- Spotify discovery still depends on the Python bridge today.
 - Key detection is still imperfect. If a track looks wrong, you can manually override BPM, key, and energy in the Library view.
 - The LLM is only as good as the data you give it. If your metadata (artist/title) is messy, the AI has less to work with.
 - Spotify's audio features API sometimes returns half-tempo BPMs for DnB. We auto-double when it looks wrong, but it's not perfect.

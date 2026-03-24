@@ -675,6 +675,7 @@ final class LocalDatabase: @unchecked Sendable {
                         score: score,
                         suggestedBPM: avgBPM,
                         suggestedKey: suggestedKey,
+                        suggestedEnergy: avgEnergy,
                         weakReason: reason,
                         bridgeCandidates: candidates
                     )

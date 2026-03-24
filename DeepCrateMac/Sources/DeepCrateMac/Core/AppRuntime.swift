@@ -1,52 +1,35 @@
 import Foundation
 
 enum AppRuntime {
-    private static let bundleRuntimeDirectory = "DeepCrateRuntime"
     private static let appSupportSubdirectory = "DeepCrate"
 
     static var isBundledApp: Bool {
         Bundle.main.bundleURL.pathExtension.lowercased() == "app"
     }
 
-    static var usesEmbeddedBackend: Bool {
-        bundledRuntimeRoot != nil
-    }
-
-    static var runtimeRoot: URL {
-        if let bundledRuntimeRoot {
-            return bundledRuntimeRoot
-        }
-        return devRepoRoot
-    }
-
-    static var backendWorkingDirectory: URL {
-        usesEmbeddedBackend ? appSupportDirectory : runtimeRoot
-    }
-
     static var envFileCandidates: [URL] {
-        if usesEmbeddedBackend {
-            return [
-                appSupportDirectory.appendingPathComponent(".env"),
-                runtimeRoot.appendingPathComponent(".env"),
-            ]
+        if isBundledApp {
+            var candidates = [appSupportDirectory.appendingPathComponent(".env")]
+            if let bundledResourceRoot {
+                candidates.append(bundledResourceRoot.appendingPathComponent(".env"))
+            }
+            return candidates
         }
-        return [runtimeRoot.appendingPathComponent(".env")]
+        return [devRepoRoot.appendingPathComponent(".env")]
     }
 
     static var defaultDatabaseSettingValue: String {
-        if usesEmbeddedBackend {
-            return defaultDatabaseURL.path
-        }
-        return "data/deepcrate.sqlite"
+        isBundledApp ? defaultDatabaseURL.path : "data/deepcrate.sqlite"
     }
 
     static var defaultDatabaseURL: URL {
-        if usesEmbeddedBackend {
+        if isBundledApp {
             return appSupportDirectory
                 .appendingPathComponent("data", isDirectory: true)
                 .appendingPathComponent("deepcrate.sqlite")
         }
-        return runtimeRoot
+
+        return devRepoRoot
             .appendingPathComponent("data", isDirectory: true)
             .appendingPathComponent("deepcrate.sqlite")
     }
@@ -56,28 +39,10 @@ enum AppRuntime {
         if trimmed.hasPrefix("/") {
             return URL(fileURLWithPath: trimmed)
         }
+
         let relative = trimmed.isEmpty ? "data/deepcrate.sqlite" : trimmed
-        let base = usesEmbeddedBackend ? appSupportDirectory : runtimeRoot
+        let base = isBundledApp ? appSupportDirectory : devRepoRoot
         return base.appendingPathComponent(relative)
-    }
-
-    static var pythonExecutableURL: URL? {
-        let candidates = [
-            runtimeRoot.appendingPathComponent(".venv/bin/python3"),
-            runtimeRoot.appendingPathComponent(".venv/bin/python"),
-        ]
-        for candidate in candidates where FileManager.default.fileExists(atPath: candidate.path) {
-            return candidate
-        }
-        return nil
-    }
-
-    static var expectedPythonLocationDescription: String {
-        runtimeRoot.appendingPathComponent(".venv/bin/python").path
-    }
-
-    static var bridgeScriptURL: URL {
-        runtimeRoot.appendingPathComponent("deepcrate/mac_bridge.py")
     }
 
     static var appSupportDirectory: URL {
@@ -91,10 +56,9 @@ enum AppRuntime {
         return target
     }
 
-    private static var bundledRuntimeRoot: URL? {
-        guard isBundledApp, let resourcesURL = Bundle.main.resourceURL else { return nil }
-        let runtime = resourcesURL.appendingPathComponent(bundleRuntimeDirectory, isDirectory: true)
-        return FileManager.default.fileExists(atPath: runtime.path) ? runtime : nil
+    private static var bundledResourceRoot: URL? {
+        guard isBundledApp else { return nil }
+        return Bundle.main.resourceURL
     }
 
     private static var devRepoRoot: URL {
@@ -111,8 +75,8 @@ enum AppRuntime {
 
         while true {
             let pyproject = current.appendingPathComponent("pyproject.toml")
-            let bridge = current.appendingPathComponent("deepcrate/mac_bridge.py")
-            if fm.fileExists(atPath: pyproject.path), fm.fileExists(atPath: bridge.path) {
+            let swiftPackage = current.appendingPathComponent("DeepCrateMac/Package.swift")
+            if fm.fileExists(atPath: pyproject.path), fm.fileExists(atPath: swiftPackage.path) {
                 return current
             }
 
