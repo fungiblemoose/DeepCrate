@@ -15,7 +15,6 @@ struct RootView: View {
     @EnvironmentObject private var appState: AppState
     @State private var selection: SidebarItem? = .library
     @State private var splitViewVisibility: NavigationSplitViewVisibility = .all
-    @State private var showsCompactToolbarStatus = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -107,23 +106,33 @@ struct RootView: View {
                         .blur(radius: 40)
                         .offset(x: 180, y: -220)
 
-                    Group {
-                        switch selection ?? .library {
-                        case .library:
-                            LibraryView()
-                        case .plan:
-                            PlanView()
-                        case .sets:
-                            SetsView()
-                        case .gaps:
-                            GapsView()
-                        case .discover:
-                            DiscoverView()
-                        case .export:
-                            ExportView()
+                    VStack(alignment: .leading, spacing: 18) {
+                        HStack(alignment: .top, spacing: 16) {
+                            Spacer(minLength: 0)
+
+                            contentStatusBadge(for: proxy.size.width)
                         }
+                        .frame(maxWidth: .infinity)
+
+                        Group {
+                            switch selection ?? .library {
+                            case .library:
+                                LibraryView()
+                            case .plan:
+                                PlanView()
+                            case .sets:
+                                SetsView()
+                            case .gaps:
+                                GapsView()
+                            case .discover:
+                                DiscoverView()
+                            case .export:
+                                ExportView()
+                            }
+                        }
+                        .groupBoxStyle(LiquidGroupBoxStyle())
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     }
-                    .groupBoxStyle(LiquidGroupBoxStyle())
                     .frame(maxWidth: 1380, maxHeight: .infinity, alignment: .topLeading)
                     .liquidPane(cornerRadius: LiquidMetrics.paneRadius)
                     .padding(detailPanePadding(for: proxy.size.width))
@@ -148,40 +157,12 @@ struct RootView: View {
                 }
                 .help("Toggle Sidebar")
             }
-
-            ToolbarItem(placement: .status) {
-                if showsCompactToolbarStatus {
-                    CompactToolbarStatusBadge(
-                        taskLabel: appState.activeTaskLabel,
-                        statusText: appState.statusMessage,
-                        isWorking: appState.isWorking,
-                        progressCurrent: appState.progressCurrent,
-                        progressTotal: appState.progressTotal,
-                        indeterminate: appState.progressIndeterminate
-                    )
-                } else {
-                    LiquidStatusBadge(
-                        text: appState.statusMessage,
-                        taskLabel: appState.activeTaskLabel,
-                        isWorking: appState.isWorking,
-                        progressCurrent: appState.progressCurrent,
-                        progressTotal: appState.progressTotal,
-                        indeterminate: appState.progressIndeterminate,
-                        updatedAt: appState.statusUpdatedAt
-                    )
-                }
-            }
         }
     }
 }
 
 private extension RootView {
     func applyResponsiveChrome(for width: CGFloat) {
-        let compactStatus = width < 1180
-        if showsCompactToolbarStatus != compactStatus {
-            showsCompactToolbarStatus = compactStatus
-        }
-
         let desiredVisibility: NavigationSplitViewVisibility = width < 1020 ? .detailOnly : .all
         if splitViewVisibility != desiredVisibility {
             splitViewVisibility = desiredVisibility
@@ -208,6 +189,30 @@ private extension RootView {
         case .export: return "square.and.arrow.up"
         }
     }
+
+    @ViewBuilder
+    func contentStatusBadge(for width: CGFloat) -> some View {
+        if width < 1180 {
+            CompactToolbarStatusBadge(
+                taskLabel: appState.activeTaskLabel,
+                statusText: appState.statusMessage,
+                isWorking: appState.isWorking,
+                progressCurrent: appState.progressCurrent,
+                progressTotal: appState.progressTotal,
+                indeterminate: appState.progressIndeterminate
+            )
+        } else {
+            LiquidStatusBadge(
+                text: appState.statusMessage,
+                taskLabel: appState.activeTaskLabel,
+                isWorking: appState.isWorking,
+                progressCurrent: appState.progressCurrent,
+                progressTotal: appState.progressTotal,
+                indeterminate: appState.progressIndeterminate,
+                updatedAt: appState.statusUpdatedAt
+            )
+        }
+    }
 }
 
 private struct CompactToolbarStatusBadge: View {
@@ -232,29 +237,38 @@ private struct CompactToolbarStatusBadge: View {
         return "\(min(progressCurrent, progressTotal))/\(progressTotal)"
     }
 
+    private var detailLabel: String {
+        let trimmed = statusText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if isWorking {
+            return progressLabel
+        }
+        return trimmed.isEmpty || trimmed == "Ready" ? "Idle" : trimmed
+    }
+
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image(systemName: iconName)
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(tone)
                 .symbolEffect(.pulse.byLayer, isActive: isWorking)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(taskLabel)
-                    .font(.caption.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                Text(progressLabel)
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
+
+            Text(isWorking ? taskLabel : "Ready")
+                .font(.caption.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+
+            Divider()
+                .frame(height: 12)
+
+            Text(detailLabel)
+                .font(isWorking ? .caption.monospacedDigit() : .caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay(
-            Capsule()
-                .strokeBorder(Color.white.opacity(0.2), lineWidth: 1)
-        )
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(ToolbarStatusPillBackground())
         .help(statusText)
     }
 }
