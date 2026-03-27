@@ -159,10 +159,13 @@ struct SpotifyDiscoveryService: Sendable {
             var bpm = feature.tempo
             if gap.suggestedBPM > 140, bpm < 100 {
                 bpm *= 2
+            } else if gap.suggestedBPM > 0, gap.suggestedBPM < 100, bpm > 140 {
+                bpm /= 2
             }
 
             let tempoDelta = gap.suggestedBPM > 0 ? abs(bpm - gap.suggestedBPM) : 0
             let energyDelta = gap.suggestedEnergy > 0 ? abs(feature.energy - gap.suggestedEnergy) : 0
+            let trackCamelot = spotifyKeyToCamelot(key: feature.key, mode: feature.mode)
 
             let tempoScore = gap.suggestedBPM > 0
                 ? max(0, 1.0 - (tempoDelta / 8.0))
@@ -170,7 +173,15 @@ struct SpotifyDiscoveryService: Sendable {
             let energyScore = gap.suggestedEnergy > 0
                 ? max(0, 1.0 - (energyDelta / 0.35))
                 : 0.6
-            let matchScore = min(1.0, (0.65 * tempoScore) + (0.35 * energyScore))
+
+            let matchScore: Double
+            let targetKey = gap.suggestedKey.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !targetKey.isEmpty, let camelot = trackCamelot {
+                let keyScore = camelotCompatibility(targetKey, camelot)
+                matchScore = min(1.0, (0.40 * keyScore) + (0.35 * tempoScore) + (0.25 * energyScore))
+            } else {
+                matchScore = min(1.0, (0.65 * tempoScore) + (0.35 * energyScore))
+            }
 
             let suggestion = DiscoverSuggestion(
                 artist: item.artists.map(\.name).joined(separator: ", "),
@@ -178,6 +189,7 @@ struct SpotifyDiscoveryService: Sendable {
                 album: item.album.name,
                 bpm: round(bpm * 10.0) / 10.0,
                 energy: round(feature.energy * 100.0) / 100.0,
+                camelotKey: trackCamelot ?? "",
                 artworkURL: item.album.images.first?.url ?? "",
                 url: item.externalURLs.spotify,
                 matchScore: round(matchScore * 100.0) / 100.0,
@@ -216,6 +228,37 @@ struct SpotifyDiscoveryService: Sendable {
             results.append(contentsOf: supplemental)
         }
         return results
+    }
+
+    // Spotify pitch class (0=C … 11=B) + mode (0=minor, 1=major) → Camelot notation.
+    // Arrays are indexed by pitch class.
+    private static let majorCamelot = ["8B","3B","10B","5B","12B","7B","2B","9B","4B","11B","6B","1B"]
+    private static let minorCamelot = ["5A","12A","7A","2A","9A","4A","11A","6A","1A","8A","3A","10A"]
+
+    private func spotifyKeyToCamelot(key: Int, mode: Int) -> String? {
+        guard (0...11).contains(key) else { return nil }
+        return mode == 1
+            ? SpotifyDiscoveryService.majorCamelot[key]
+            : SpotifyDiscoveryService.minorCamelot[key]
+    }
+
+    private func parseCamelot(_ value: String) -> (number: Int, letter: Character)? {
+        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard let letter = normalized.last, letter == "A" || letter == "B" else { return nil }
+        guard let number = Int(normalized.dropLast()), (1...12).contains(number) else { return nil }
+        return (number, letter)
+    }
+
+    private func camelotCompatibility(_ lhs: String, _ rhs: String) -> Double {
+        guard let a = parseCamelot(lhs), let b = parseCamelot(rhs) else { return 0.5 }
+        if a.number == b.number && a.letter == b.letter { return 1.0 }
+        if a.number == b.number { return 0.8 }
+        if a.letter == b.letter {
+            let distance = min(abs(a.number - b.number), 12 - abs(a.number - b.number))
+            if distance == 1 { return 0.8 }
+            if distance == 2 { return 0.5 }
+        }
+        return 0.2
     }
 
     private func perform<Response: Decodable>(_ request: URLRequest, decode type: Response.Type) async throws -> Response {
@@ -363,6 +406,7 @@ private struct SpotifyAudioFeature: Decodable {
     let tempo: Double
     let energy: Double
     let key: Int
+    let mode: Int
 }
 
 private extension Array {
