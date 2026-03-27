@@ -577,7 +577,7 @@ struct PlanView: View {
             let model = resolvedLocalModelName()
             let token = resolvedLocalModelToken()
             let planner = LocalModelPlanner()
-            let ids = try await planner.planTrackIDs(
+            let result = try await planner.planTrackIDs(
                 description: description,
                 durationMinutes: duration,
                 tracks: tracks,
@@ -585,7 +585,7 @@ struct PlanView: View {
                 model: model,
                 authToken: token
             )
-            if ids.isEmpty {
+            if result.trackIDs.isEmpty {
                 appState.statusMessage = "Local model returned no tracks."
                 return
             }
@@ -595,12 +595,22 @@ struct PlanView: View {
                     name: name,
                     description: description,
                     duration: duration,
-                    trackIDs: ids
+                    trackIDs: result.trackIDs
                 )
             }.value
+
+            let originNote: String?
+            if result.validModelIDCount == 0 {
+                originNote = "Model returned no valid tracks — set built algorithmically."
+            } else if result.validModelIDCount < result.trackIDs.count / 2 {
+                originNote = "Model matched \(result.validModelIDCount)/\(result.trackIDs.count) tracks — remainder filled algorithmically."
+            } else {
+                originNote = nil
+            }
+            let baseMessage = preflightWarning.map { "Created set \(name). Note: \($0)" } ?? "Created set \(name)"
             appState.statusMessage = "Created set \(name) with local model server"
             inlineMessageIsError = false
-            inlineMessage = preflightWarning.map { "Created set \(name). Note: \($0)" } ?? "Created set \(name)"
+            inlineMessage = originNote.map { "\(baseMessage) (\($0))" } ?? baseMessage
             await refreshSets()
         } catch {
             appState.statusMessage = "Local model planning failed: \(error.localizedDescription)"

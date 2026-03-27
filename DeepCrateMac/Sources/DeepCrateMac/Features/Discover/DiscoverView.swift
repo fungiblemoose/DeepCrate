@@ -691,6 +691,9 @@ private struct DiscoverResultCard: View {
 
                 HStack(spacing: 10) {
                     DiscoverMetricPill(title: "BPM", value: String(format: "%.1f", suggestion.bpm))
+                    if !suggestion.camelotKey.isEmpty {
+                        DiscoverMetricPill(title: "Key", value: suggestion.camelotKey)
+                    }
                     DiscoverMetricPill(title: "Energy", value: String(format: "%.2f", suggestion.energy))
                     DiscoverMetricPill(title: "Tempo Δ", value: String(format: "%.1f", suggestion.tempoDelta))
                     DiscoverMetricPill(title: "Energy Δ", value: String(format: "%.2f", suggestion.energyDelta))

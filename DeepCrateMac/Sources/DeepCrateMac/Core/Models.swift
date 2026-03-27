@@ -136,6 +136,7 @@ struct DiscoverSuggestion: Identifiable, Hashable {
     var album: String
     var bpm: Double
     var energy: Double
+    var camelotKey: String
     var artworkURL: String
     var url: String
     var matchScore: Double
@@ -149,6 +150,7 @@ struct DiscoverSuggestion: Identifiable, Hashable {
         album: String = "",
         bpm: Double,
         energy: Double,
+        camelotKey: String = "",
         artworkURL: String = "",
         url: String,
         matchScore: Double = 0,
@@ -161,6 +163,7 @@ struct DiscoverSuggestion: Identifiable, Hashable {
         self.album = album
         self.bpm = bpm
         self.energy = energy
+        self.camelotKey = camelotKey
         self.artworkURL = artworkURL
         self.url = url
         self.matchScore = matchScore

@@ -17,6 +17,12 @@ enum LocalModelPlannerError: LocalizedError {
     }
 }
 
+struct LocalModelPlanResult {
+    let trackIDs: [Int]
+    /// How many IDs the model returned were valid library tracks (before fallback padding).
+    let validModelIDCount: Int
+}
+
 struct LocalModelPlanner {
     private let fallbackPlanner = LocalApplePlanner()
 
@@ -27,7 +33,7 @@ struct LocalModelPlanner {
         endpoint: String,
         model: String,
         authToken: String
-    ) async throws -> [Int] {
+    ) async throws -> LocalModelPlanResult {
         let requestURL = try resolvedEndpointURL(endpoint)
         let selectedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !selectedModel.isEmpty else {
@@ -81,13 +87,15 @@ struct LocalModelPlanner {
         }
 
         let planned = parseIDs(from: raw) ?? []
+        let trackIDSet = Set(tracks.map(\.id))
+        let validModelIDCount = planned.filter { trackIDSet.contains($0) }.count
         let normalized = fallbackPlanner.normalizePlannedIDs(
             planned,
             description: description,
             durationMinutes: durationMinutes,
             tracks: tracks
         )
-        return normalized
+        return LocalModelPlanResult(trackIDs: normalized, validModelIDCount: validModelIDCount)
     }
 
     private func parseIDs(from raw: String) -> [Int]? {
