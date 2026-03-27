@@ -49,6 +49,7 @@ struct LibraryView: View {
                     .foregroundStyle(.orange)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .task {
             await loadTracks()
         }
@@ -262,8 +263,9 @@ struct LibraryView: View {
                     }
                     .width(min: 68, ideal: 74, max: 80)
                 }
-                .frame(minHeight: 420)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .layoutPriority(1)
             .liquidCard(cornerRadius: LiquidMetrics.cardRadius, material: .ultraThinMaterial, contentPadding: 14, shadowOpacity: 0.05)
 
@@ -274,6 +276,7 @@ struct LibraryView: View {
                 .frame(minWidth: 260, idealWidth: 320, maxWidth: 360)
                 .liquidCard(cornerRadius: LiquidMetrics.cardRadius, material: .thinMaterial, contentPadding: 14, shadowOpacity: 0.05)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(6)
     }
 
