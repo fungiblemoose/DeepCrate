@@ -62,14 +62,16 @@ struct SetsView: View {
                             TableColumn("Energy") { row in Text(String(format: "%.2f", row.energy)) }
                             TableColumn("Transition", value: \.transition)
                         }
-                        .frame(minHeight: 420)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     .liquidCard(cornerRadius: LiquidMetrics.cardRadius, material: .ultraThinMaterial, contentPadding: 14, shadowOpacity: 0.05)
 
                     transitionInspector
                         .frame(minWidth: 320, idealWidth: 360, maxWidth: 420)
                         .liquidCard(cornerRadius: LiquidMetrics.cardRadius, material: .thinMaterial, contentPadding: 14, shadowOpacity: 0.05)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else {
                 ContentUnavailableView("No set selected", systemImage: "list.number")
             }
@@ -80,6 +82,7 @@ struct SetsView: View {
                     .foregroundStyle(.orange)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .task {
             await refreshSets()
         }

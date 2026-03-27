@@ -61,7 +61,7 @@ struct GapsView: View {
                         TableColumn("Bridge BPM") { gap in Text("\(Int(gap.suggestedBPM.rounded()))") }
                         TableColumn("Bridge Key", value: \.suggestedKey)
                     }
-                    .frame(minHeight: 420)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                     gapInspector
                         .frame(minWidth: 320, idealWidth: 360, maxWidth: 420)
@@ -70,6 +70,7 @@ struct GapsView: View {
                 .liquidCard(cornerRadius: LiquidMetrics.cardRadius, material: .ultraThinMaterial, contentPadding: 14, shadowOpacity: 0.05)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .task {
             await refreshSets()
         }
