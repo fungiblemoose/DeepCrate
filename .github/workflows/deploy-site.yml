@@ -5,6 +5,7 @@ on:
     branches: [master]
     paths:
       - "website/**"
+      - "wrangler.toml"
       - ".github/workflows/deploy-site.yml"
   workflow_dispatch:
 
@@ -20,4 +21,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: e534c165d41f47d638067fb9b6d0f418
-          command: pages deploy website --project-name digcrate
+          command: deploy

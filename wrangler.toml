@@ -1,0 +1,9 @@
+name = "digcrate"
+compatibility_date = "2026-06-01"
+
+routes = [
+  { pattern = "digcrate.backspinlabs.com", custom_domain = true },
+]
+
+[assets]
+directory = "website"
