@@ -27,7 +27,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: deepcrate-macos
+          name: digcrate-macos
           path: |
             dist/*.dmg
             dist/*.zip

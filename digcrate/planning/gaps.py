@@ -1,8 +1,8 @@
 """Identify weak transitions and missing tracks in a set."""
 
-from deepcrate.db import get_gaps, get_set_tracks, get_track_by_id, set_gaps
-from deepcrate.models import Gap, Track, TransitionInfo
-from deepcrate.planning.scoring import transition_score
+from digcrate.db import get_gaps, get_set_tracks, get_track_by_id, set_gaps
+from digcrate.models import Gap, Track, TransitionInfo
+from digcrate.planning.scoring import transition_score
 
 WEAK_THRESHOLD = 0.5  # Transitions below this score are flagged
 
@@ -23,8 +23,8 @@ def analyze_gaps(set_id: int) -> list[TransitionInfo]:
         score = transition_score(track_a, track_b)
         if score < WEAK_THRESHOLD:
             issues = []
-            from deepcrate.analysis.camelot import key_compatibility_score
-            from deepcrate.planning.scoring import bpm_compatibility_score, energy_flow_score
+            from digcrate.analysis.camelot import key_compatibility_score
+            from digcrate.planning.scoring import bpm_compatibility_score, energy_flow_score
 
             if key_compatibility_score(track_a.musical_key, track_b.musical_key) < 0.5:
                 issues.append(f"Key clash: {track_a.musical_key} → {track_b.musical_key}")
@@ -47,7 +47,7 @@ def analyze_gaps(set_id: int) -> list[TransitionInfo]:
         avg_energy = (trans.from_track.energy_level + trans.to_track.energy_level) / 2
 
         # Suggest a key compatible with both tracks
-        from deepcrate.analysis.camelot import compatible_keys
+        from digcrate.analysis.camelot import compatible_keys
         keys_a = set(compatible_keys(trans.from_track.musical_key))
         keys_b = set(compatible_keys(trans.to_track.musical_key))
         common_keys = keys_a & keys_b

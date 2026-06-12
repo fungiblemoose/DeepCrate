@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from deepcrate.analysis.analyzer import (
+from digcrate.analysis.analyzer import (
     ANALYSIS_VERSION,
     _normalize_bpm,
     analyze_track,
@@ -142,18 +142,18 @@ def test_parse_key_tag_to_camelot_formats():
 def test_analyze_track_prefers_metadata_bpm_and_key():
     fake_audio = np.zeros(22050 * 4, dtype=np.float32)
     with (
-        patch("deepcrate.analysis.analyzer.file_hash", return_value="abc123"),
+        patch("digcrate.analysis.analyzer.file_hash", return_value="abc123"),
         patch(
-            "deepcrate.analysis.analyzer.read_metadata",
+            "digcrate.analysis.analyzer.read_metadata",
             return_value={"title": "Tagged Title", "artist": "Tagged Artist", "bpm": "174", "key": "Am"},
         ),
-        patch("deepcrate.analysis.analyzer.parse_filename_metadata", return_value={"title": "Filename Title"}),
-        patch("deepcrate.analysis.analyzer.read_duration", return_value=240.0),
-        patch("deepcrate.analysis.analyzer.load_analysis_window", return_value=(fake_audio, 22050, 0.0)),
-        patch("deepcrate.analysis.analyzer.detect_bpm", return_value=128.0) as mock_detect_bpm,
-        patch("deepcrate.analysis.analyzer.detect_key", return_value="9A") as mock_detect_key,
-        patch("deepcrate.analysis.analyzer.detect_energy_with_confidence", return_value=(0.72, 0.88)),
-        patch("deepcrate.analysis.analyzer.detect_preview_start", return_value=12.0),
+        patch("digcrate.analysis.analyzer.parse_filename_metadata", return_value={"title": "Filename Title"}),
+        patch("digcrate.analysis.analyzer.read_duration", return_value=240.0),
+        patch("digcrate.analysis.analyzer.load_analysis_window", return_value=(fake_audio, 22050, 0.0)),
+        patch("digcrate.analysis.analyzer.detect_bpm", return_value=128.0) as mock_detect_bpm,
+        patch("digcrate.analysis.analyzer.detect_key", return_value="9A") as mock_detect_key,
+        patch("digcrate.analysis.analyzer.detect_energy_with_confidence", return_value=(0.72, 0.88)),
+        patch("digcrate.analysis.analyzer.detect_preview_start", return_value=12.0),
     ):
         track = analyze_track(Path("/music/test.mp3"))
 
@@ -167,21 +167,21 @@ def test_analyze_track_prefers_metadata_bpm_and_key():
 def test_analyze_track_falls_back_to_signal_when_tags_invalid():
     fake_audio = np.zeros(22050 * 4, dtype=np.float32)
     with (
-        patch("deepcrate.analysis.analyzer.file_hash", return_value="abc123"),
+        patch("digcrate.analysis.analyzer.file_hash", return_value="abc123"),
         patch(
-            "deepcrate.analysis.analyzer.read_metadata",
+            "digcrate.analysis.analyzer.read_metadata",
             return_value={"title": "", "artist": "", "bpm": "??", "key": "??"},
         ),
         patch(
-            "deepcrate.analysis.analyzer.parse_filename_metadata",
+            "digcrate.analysis.analyzer.parse_filename_metadata",
             return_value={"title": "Filename Title", "artist": "Filename Artist"},
         ),
-        patch("deepcrate.analysis.analyzer.read_duration", return_value=200.0),
-        patch("deepcrate.analysis.analyzer.load_analysis_window", return_value=(fake_audio, 22050, 0.0)),
-        patch("deepcrate.analysis.analyzer.detect_bpm", return_value=171.2) as mock_detect_bpm,
-        patch("deepcrate.analysis.analyzer.detect_key", return_value="10A") as mock_detect_key,
-        patch("deepcrate.analysis.analyzer.detect_energy_with_confidence", return_value=(0.65, 0.93)),
-        patch("deepcrate.analysis.analyzer.detect_preview_start", return_value=15.0),
+        patch("digcrate.analysis.analyzer.read_duration", return_value=200.0),
+        patch("digcrate.analysis.analyzer.load_analysis_window", return_value=(fake_audio, 22050, 0.0)),
+        patch("digcrate.analysis.analyzer.detect_bpm", return_value=171.2) as mock_detect_bpm,
+        patch("digcrate.analysis.analyzer.detect_key", return_value="10A") as mock_detect_key,
+        patch("digcrate.analysis.analyzer.detect_energy_with_confidence", return_value=(0.65, 0.93)),
+        patch("digcrate.analysis.analyzer.detect_preview_start", return_value=15.0),
     ):
         track = analyze_track(Path("/music/test.mp3"))
 

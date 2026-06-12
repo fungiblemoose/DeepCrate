@@ -7,16 +7,16 @@ from dataclasses import dataclass
 from openai import OpenAI
 from rich.console import Console
 
-from deepcrate.config import get_settings
-from deepcrate.db import (
+from digcrate.config import get_settings
+from digcrate.db import (
     create_set,
     delete_set,
     get_all_tracks,
     set_set_tracks,
 )
-from deepcrate.models import SetPlan, SetTrack
-from deepcrate.planning.prompts import SYSTEM_PROMPT, build_library_context, build_plan_prompt
-from deepcrate.planning.scoring import transition_score
+from digcrate.models import SetPlan, SetTrack
+from digcrate.planning.prompts import SYSTEM_PROMPT, build_library_context, build_plan_prompt
+from digcrate.planning.scoring import transition_score
 
 console = Console()
 
@@ -518,7 +518,7 @@ def plan_set(description: str, name: str, duration: int = 60) -> SetPlan | None:
 
     all_tracks = get_all_tracks()
     if not all_tracks:
-        console.print("[red]Error:[/red] No tracks in library. Run 'deepcrate scan' first.")
+        console.print("[red]Error:[/red] No tracks in library. Run 'digcrate scan' first.")
         return None
 
     genre_profiles = _infer_genre_profiles(description)

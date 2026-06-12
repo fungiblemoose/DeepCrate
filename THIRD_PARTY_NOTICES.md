@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-DeepCrate includes and depends on third-party libraries. Each dependency is
+DigCrate includes and depends on third-party libraries. Each dependency is
 licensed by its respective authors under its own terms.
 
 This file is a practical summary for maintainers and distributors. It does not
@@ -24,7 +24,7 @@ replace any upstream license text.
 
 ## Distribution Notes
 
-- If you distribute DeepCrate binaries, ensure all required third-party license
+- If you distribute DigCrate binaries, ensure all required third-party license
   notices are shipped with your distribution.
 - Some optional/legacy components (for example `mutagen` and `PySide6`) use
   copyleft licenses. Verify compliance requirements for your specific

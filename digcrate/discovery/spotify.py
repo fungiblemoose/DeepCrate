@@ -4,7 +4,7 @@ import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 from rich.console import Console
 
-from deepcrate.config import get_settings
+from digcrate.config import get_settings
 
 console = Console()
 

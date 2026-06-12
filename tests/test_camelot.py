@@ -1,6 +1,6 @@
 """Tests for Camelot key wheel logic."""
 
-from deepcrate.analysis.camelot import (
+from digcrate.analysis.camelot import (
     compatible_keys,
     key_compatibility_score,
     key_name_to_camelot,

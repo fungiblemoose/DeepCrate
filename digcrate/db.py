@@ -4,8 +4,8 @@ import asyncio
 import sqlite3
 from pathlib import Path
 
-from deepcrate.config import get_settings
-from deepcrate.models import Gap, SetPlan, SetTrack, Track
+from digcrate.config import get_settings
+from digcrate.models import Gap, SetPlan, SetTrack, Track
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS tracks (

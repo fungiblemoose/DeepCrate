@@ -1,4 +1,4 @@
-"""PySide6 desktop GUI for DeepCrate."""
+"""PySide6 desktop GUI for DigCrate."""
 
 from __future__ import annotations
 
@@ -43,8 +43,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from deepcrate.gui import services
-from deepcrate.gui.worker import Worker
+from digcrate.gui import services
+from digcrate.gui.worker import Worker
 
 
 class LibraryTab(QWidget):
@@ -294,7 +294,7 @@ class LibraryTab(QWidget):
         self.preview_status.setText(f"Preview error: {detail}")
 
     def _error(self, message: str) -> None:
-        QMessageBox.critical(self, "DeepCrate", message)
+        QMessageBox.critical(self, "DigCrate", message)
 
 
 class PlanTab(QWidget):
@@ -338,7 +338,7 @@ class PlanTab(QWidget):
         duration = self.duration_input.value()
 
         if not name or not description:
-            QMessageBox.warning(self, "DeepCrate", "Name and description are required.")
+            QMessageBox.warning(self, "DigCrate", "Name and description are required.")
             return
 
         self.plan_btn.setEnabled(False)
@@ -358,7 +358,7 @@ class PlanTab(QWidget):
     def _on_plan_error(self, trace: str) -> None:
         self.plan_btn.setEnabled(True)
         self.status_label.setText("Failed to plan set.")
-        QMessageBox.critical(self, "DeepCrate", trace)
+        QMessageBox.critical(self, "DigCrate", trace)
 
     def _load_preview(self, name: str) -> None:
         rows = services.get_set_tracks_detailed(name)
@@ -458,13 +458,13 @@ class GapsTab(QWidget):
     def _analyze(self) -> None:
         name = self.set_picker.currentText().strip()
         if not name:
-            QMessageBox.warning(self, "DeepCrate", "Choose a set first.")
+            QMessageBox.warning(self, "DigCrate", "Choose a set first.")
             return
 
         try:
             weak, gaps = services.analyze_set_gaps(name)
         except Exception as exc:
-            QMessageBox.critical(self, "DeepCrate", str(exc))
+            QMessageBox.critical(self, "DigCrate", str(exc))
             return
 
         self.table.setRowCount(len(weak))
@@ -556,7 +556,7 @@ class DiscoverTab(QWidget):
         limit = self.limit_input.value()
 
         if not set_name or gap_number is None:
-            QMessageBox.warning(self, "DeepCrate", "Choose a set and gap first.")
+            QMessageBox.warning(self, "DigCrate", "Choose a set and gap first.")
             return
 
         self.discover_btn.setEnabled(False)
@@ -582,7 +582,7 @@ class DiscoverTab(QWidget):
     def _on_discover_error(self, trace: str) -> None:
         self.discover_btn.setEnabled(True)
         self.status_label.setText("Discover failed")
-        QMessageBox.critical(self, "DeepCrate", trace)
+        QMessageBox.critical(self, "DigCrate", trace)
 
     def _open_link(self, row: int, column: int) -> None:
         if column != 4:
@@ -653,13 +653,13 @@ class ExportTab(QWidget):
         output_path = self.output_input.text().strip() or None
 
         if not name:
-            QMessageBox.warning(self, "DeepCrate", "Choose a set first.")
+            QMessageBox.warning(self, "DigCrate", "Choose a set first.")
             return
 
         try:
             path = services.export_set(name, fmt, output_path)
         except Exception as exc:
-            QMessageBox.critical(self, "DeepCrate", str(exc))
+            QMessageBox.critical(self, "DigCrate", str(exc))
             return
 
         self.status_label.setText(f"Exported: {path}")
@@ -687,7 +687,7 @@ class PreferencesDialog(QDialog):
         self.spotify_client_secret = QLineEdit(current.get("SPOTIFY_CLIENT_SECRET", ""))
         self.spotify_client_secret.setEchoMode(QLineEdit.Password)
 
-        self.database_path = QLineEdit(current.get("DATABASE_PATH", "data/deepcrate.sqlite"))
+        self.database_path = QLineEdit(current.get("DATABASE_PATH", "data/digcrate.sqlite"))
 
         form.addRow("OpenAI API Key", self.openai_key)
         form.addRow("OpenAI Model", self.openai_model)
@@ -708,10 +708,10 @@ class PreferencesDialog(QDialog):
             "OPENAI_MODEL": self.openai_model.text() or "gpt-4o-mini",
             "SPOTIFY_CLIENT_ID": self.spotify_client_id.text(),
             "SPOTIFY_CLIENT_SECRET": self.spotify_client_secret.text(),
-            "DATABASE_PATH": self.database_path.text() or "data/deepcrate.sqlite",
+            "DATABASE_PATH": self.database_path.text() or "data/digcrate.sqlite",
         }
         path = services.save_preferences(updates)
-        QMessageBox.information(self, "DeepCrate", f"Saved preferences to {path}")
+        QMessageBox.information(self, "DigCrate", f"Saved preferences to {path}")
         self.accept()
 
 
@@ -766,10 +766,10 @@ def _apply_platform_look(app: QApplication) -> None:
     )
 
 
-class DeepCrateWindow(QMainWindow):
+class DigCrateWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("DeepCrate")
+        self.setWindowTitle("DigCrate")
         self.resize(1320, 860)
 
         self.thread_pool = QThreadPool.globalInstance()
@@ -851,7 +851,7 @@ class DeepCrateWindow(QMainWindow):
         edit_menu.addAction(prefs_action)
 
         help_menu = menu.addMenu("&Help")
-        about_action = QAction("About DeepCrate", self)
+        about_action = QAction("About DigCrate", self)
         about_action.setMenuRole(QAction.AboutRole)
         about_action.triggered.connect(self._about_dialog)
         help_menu.addAction(about_action)
@@ -874,17 +874,17 @@ class DeepCrateWindow(QMainWindow):
     def _about_dialog(self) -> None:
         QMessageBox.about(
             self,
-            "About DeepCrate",
-            "DeepCrate\nAI-powered DJ set builder\n\nLocal desktop GUI using PySide6.",
+            "About DigCrate",
+            "DigCrate\nAI-powered DJ set builder\n\nLocal desktop GUI using PySide6.",
         )
 
 
 def run() -> None:
     app = QApplication(sys.argv)
-    app.setApplicationName("DeepCrate")
+    app.setApplicationName("DigCrate")
     _apply_platform_look(app)
 
-    window = DeepCrateWindow()
+    window = DigCrateWindow()
     window.show()
 
     sys.exit(app.exec())

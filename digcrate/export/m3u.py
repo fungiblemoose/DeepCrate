@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from deepcrate.db import get_set_by_name, get_set_tracks, get_track_by_id
-from deepcrate.models import Track
+from digcrate.db import get_set_by_name, get_set_tracks, get_track_by_id
+from digcrate.models import Track
 
 
 def export_m3u(set_name: str, output_path: str | None = None) -> str | None:

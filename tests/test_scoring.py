@@ -1,7 +1,7 @@
 """Tests for transition scoring."""
 
-from deepcrate.models import Track
-from deepcrate.planning.scoring import (
+from digcrate.models import Track
+from digcrate.planning.scoring import (
     bpm_compatibility_score,
     describe_transition,
     energy_flow_score,

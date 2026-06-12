@@ -8,8 +8,8 @@ import librosa
 import mutagen
 import numpy as np
 
-from deepcrate.analysis.camelot import CHROMA_MAJOR, CHROMA_MINOR, KEY_TO_CAMELOT, key_name_to_camelot, parse_camelot
-from deepcrate.models import Track
+from digcrate.analysis.camelot import CHROMA_MAJOR, CHROMA_MINOR, KEY_TO_CAMELOT, key_name_to_camelot, parse_camelot
+from digcrate.models import Track
 
 ANALYSIS_VERSION = 3
 

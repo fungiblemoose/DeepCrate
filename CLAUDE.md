@@ -1,8 +1,8 @@
-# DeepCrate — Agent Reference
+# DigCrate — Agent Reference
 
 ## What This Project Is
 
-DeepCrate is a CLI-only Python tool for planning DJ sets. It analyzes local audio files (BPM, key, energy), uses OpenAI to plan sets from natural language descriptions, scores transitions using the Camelot harmonic mixing system, and exports playlists to M3U or Rekordbox XML.
+DigCrate is a CLI-only Python tool for planning DJ sets. It analyzes local audio files (BPM, key, energy), uses OpenAI to plan sets from natural language descriptions, scores transitions using the Camelot harmonic mixing system, and exports playlists to M3U or Rekordbox XML.
 
 ## Tech Stack
 
@@ -18,7 +18,7 @@ DeepCrate is a CLI-only Python tool for planning DJ sets. It analyzes local audi
 ## Project Layout
 
 ```
-deepcrate/
+digcrate/
 ├── cli.py              # All Typer commands. Entry point is `app`.
 ├── config.py           # Settings class, loads .env
 ├── db.py               # SQLite schema + all CRUD functions (sync, not async)
@@ -41,7 +41,7 @@ deepcrate/
 
 ## Database Schema
 
-SQLite at `data/deepcrate.sqlite`. Four tables:
+SQLite at `data/digcrate.sqlite`. Four tables:
 
 - **tracks** — `id, file_path (UNIQUE), file_hash, title, artist, bpm, musical_key, energy_level, duration`
 - **sets** — `id, name (UNIQUE), description, target_duration`
@@ -54,14 +54,14 @@ All DB access goes through `db.py` functions. Schema auto-creates on first conne
 
 | Command | What it does |
 |---------|-------------|
-| `deepcrate scan <dir>` | Analyze audio files, store in DB. Skips unchanged files (by hash). |
-| `deepcrate stats` | Library overview: count, BPM range, top keys, total duration. |
-| `deepcrate search` | Filter library by `--bpm`, `--key`, `--energy`, `-q` text search. |
-| `deepcrate plan <description> --name <name> --duration <min>` | AI-powered set planning via OpenAI. |
-| `deepcrate show <name>` | Display set tracklist with transition scores. |
-| `deepcrate gaps <name>` | Find weak transitions, store gap suggestions. |
-| `deepcrate discover --name <name> --gap <n>` | Search Spotify for tracks to fill a gap. |
-| `deepcrate export <name> --format m3u\|rekordbox` | Export playlist file. |
+| `digcrate scan <dir>` | Analyze audio files, store in DB. Skips unchanged files (by hash). |
+| `digcrate stats` | Library overview: count, BPM range, top keys, total duration. |
+| `digcrate search` | Filter library by `--bpm`, `--key`, `--energy`, `-q` text search. |
+| `digcrate plan <description> --name <name> --duration <min>` | AI-powered set planning via OpenAI. |
+| `digcrate show <name>` | Display set tracklist with transition scores. |
+| `digcrate gaps <name>` | Find weak transitions, store gap suggestions. |
+| `digcrate discover --name <name> --gap <n>` | Search Spotify for tracks to fill a gap. |
+| `digcrate export <name> --format m3u\|rekordbox` | Export playlist file. |
 
 ## Key Design Decisions
 
@@ -95,7 +95,7 @@ Set in `.env` at project root:
 | `OPENAI_MODEL` | No | `gpt-4o-mini` | Can use `gpt-4o` for better results |
 | `SPOTIFY_CLIENT_ID` | For `discover` command | `""` | From developer.spotify.com |
 | `SPOTIFY_CLIENT_SECRET` | For `discover` command | `""` | From developer.spotify.com |
-| `DATABASE_PATH` | No | `data/deepcrate.sqlite` | Relative to working directory |
+| `DATABASE_PATH` | No | `data/digcrate.sqlite` | Relative to working directory |
 
 ## Common Modifications
 

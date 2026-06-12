@@ -1,4 +1,4 @@
-"""Pydantic models for DeepCrate domain objects."""
+"""Pydantic models for DigCrate domain objects."""
 
 from pathlib import Path
 

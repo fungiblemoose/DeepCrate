@@ -1,7 +1,7 @@
 """Transition compatibility scoring between tracks."""
 
-from deepcrate.analysis.camelot import key_compatibility_score
-from deepcrate.models import Track
+from digcrate.analysis.camelot import key_compatibility_score
+from digcrate.models import Track
 
 
 def bpm_compatibility_score(bpm_a: float, bpm_b: float) -> float:

@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "deepcrate"
+name = "digcrate"
 version = "0.1.0"
-description = "AI-powered DJ set builder"
+description = "DigCrate — AI-powered DJ set builder"
 requires-python = ">=3.12"
 license = { file = "LICENSE" }
 classifiers = [
@@ -26,8 +26,8 @@ dependencies = [
 ]
 
 [project.scripts]
-deepcrate = "deepcrate.cli:app"
-deepcrate-gui = "deepcrate.gui.app:run"
+digcrate = "digcrate.cli:app"
+digcrate-gui = "digcrate.gui.app:run"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -4,8 +4,8 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from urllib.parse import quote
 
-from deepcrate.db import get_set_by_name, get_set_tracks, get_track_by_id
-from deepcrate.models import Track
+from digcrate.db import get_set_by_name, get_set_tracks, get_track_by_id
+from digcrate.models import Track
 
 # Camelot to Rekordbox key ID mapping
 CAMELOT_TO_REKORDBOX_KEY = {
@@ -43,7 +43,7 @@ def export_rekordbox(set_name: str, output_path: str | None = None) -> str | Non
 
     # Build Rekordbox XML
     root = ET.Element("DJ_PLAYLISTS", Version="1.0.0")
-    product = ET.SubElement(root, "PRODUCT", Name="DeepCrate", Version="0.1.0")
+    product = ET.SubElement(root, "PRODUCT", Name="DigCrate", Version="0.1.0")
     collection = ET.SubElement(root, "COLLECTION", Entries=str(len(tracks)))
 
     for i, track in enumerate(tracks):

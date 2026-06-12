@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     spotify_client_id: str = ""
     spotify_client_secret: str = ""
-    database_path: str = "data/deepcrate.sqlite"
+    database_path: str = "data/digcrate.sqlite"
 
     def db_path(self) -> Path:
         return Path(self.database_path)

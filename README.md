@@ -1,12 +1,12 @@
-# DeepCrate
+# DigCrate
 
-DeepCrate is a command-line tool for AI-powered DJ set planning. It analyzes
+DigCrate is a command-line tool for AI-powered DJ set planning. It analyzes
 your local music library (BPM, musical key, energy), plans sets from natural
 language descriptions, scores every transition using harmonic mixing rules,
 finds the weak spots, and exports playlists you can actually play out.
 
-> **Looking for the Mac app?** A native macOS version of DeepCrate with a
-> full GUI is in development — see [deepcrate.backspinlabs.com](https://deepcrate.backspinlabs.com).
+> **Looking for the Mac app?** A native macOS version of DigCrate with a
+> full GUI is in development — see [digcrate.backspinlabs.com](https://digcrate.backspinlabs.com).
 
 ## What it does
 
@@ -15,7 +15,7 @@ finds the weak spots, and exports playlists you can actually play out.
   in standard harmonic notation like `8A`), and energy (RMS + spectral centroid).
   All analysis is local via `librosa`; nothing is uploaded.
 - **Plan** — describe the set you want ("60 minute liquid dnb journey,
-  start mellow, peak around minute 40") and DeepCrate selects and orders
+  start mellow, peak around minute 40") and DigCrate selects and orders
   tracks from your library using an LLM, then validates everything against
   your actual files. Note: planning sends track metadata (artist, title,
   BPM, key, energy) to OpenAI — audio never leaves your machine, but the
@@ -31,8 +31,8 @@ finds the weak spots, and exports playlists you can actually play out.
 ## Install
 
 ```bash
-git clone https://github.com/fungiblemoose/DeepCrate.git
-cd DeepCrate
+git clone https://github.com/fungiblemoose/digcrate.git
+cd digcrate
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e .
 cp .env.example .env   # add your OpenAI key (and Spotify keys for discover)
@@ -44,14 +44,14 @@ Requires Python 3.12+.
 
 | Command | What it does |
 |---------|-------------|
-| `deepcrate scan <dir>` | Analyze audio files and store results. Unchanged files are skipped on rescan. |
-| `deepcrate stats` | Library overview: track count, BPM range, top keys, total duration. |
-| `deepcrate search` | Filter by `--bpm`, `--key`, `--energy`, or `-q` text. |
-| `deepcrate plan "<description>" --name <name> --duration <min>` | AI set planning. |
-| `deepcrate show <name>` | Tracklist with per-transition scores. |
-| `deepcrate gaps <name>` | Flag weak transitions and suggest bridge profiles. |
-| `deepcrate discover --name <name> --gap <n>` | Spotify candidates for a gap. |
-| `deepcrate export <name> --format m3u\|rekordbox` | Write a playlist file. |
+| `digcrate scan <dir>` | Analyze audio files and store results. Unchanged files are skipped on rescan. |
+| `digcrate stats` | Library overview: track count, BPM range, top keys, total duration. |
+| `digcrate search` | Filter by `--bpm`, `--key`, `--energy`, or `-q` text. |
+| `digcrate plan "<description>" --name <name> --duration <min>` | AI set planning. |
+| `digcrate show <name>` | Tracklist with per-transition scores. |
+| `digcrate gaps <name>` | Flag weak transitions and suggest bridge profiles. |
+| `digcrate discover --name <name> --gap <n>` | Spotify candidates for a gap. |
+| `digcrate export <name> --format m3u\|rekordbox` | Write a playlist file. |
 
 ## Configuration
 
@@ -62,7 +62,7 @@ Set in `.env` at the project root:
 | `OPENAI_API_KEY` | `plan` | — |
 | `OPENAI_MODEL` | optional | `gpt-4o-mini` |
 | `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` | `discover` | — |
-| `DATABASE_PATH` | optional | `data/deepcrate.sqlite` |
+| `DATABASE_PATH` | optional | `data/digcrate.sqlite` |
 
 ## Tests
 

@@ -1,4 +1,4 @@
-"""DeepCrate CLI — AI-powered DJ set builder."""
+"""DigCrate CLI — AI-powered DJ set builder."""
 
 from pathlib import Path
 from typing import Optional
@@ -9,7 +9,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskPr
 from rich.table import Table
 
 app = typer.Typer(
-    name="deepcrate",
+    name="digcrate",
     help="AI-powered DJ set builder. Analyze tracks, plan sets, export playlists.",
     no_args_is_help=True,
 )
@@ -21,9 +21,9 @@ def scan(
     directory: str = typer.Argument(..., help="Directory to scan for audio files"),
 ):
     """Analyze all audio tracks in a directory."""
-    from deepcrate.analysis.scanner import find_audio_files
-    from deepcrate.analysis.analyzer import analyze_track, file_hash
-    from deepcrate.db import get_track_by_path, upsert_track
+    from digcrate.analysis.scanner import find_audio_files
+    from digcrate.analysis.analyzer import analyze_track, file_hash
+    from digcrate.db import get_track_by_path, upsert_track
 
     dir_path = Path(directory).expanduser().resolve()
     if not dir_path.is_dir():
@@ -80,11 +80,11 @@ def scan(
 @app.command()
 def stats():
     """Show library overview statistics."""
-    from deepcrate.db import get_all_tracks
+    from digcrate.db import get_all_tracks
 
     tracks = get_all_tracks()
     if not tracks:
-        console.print("[yellow]No tracks in library. Run 'deepcrate scan' first.[/yellow]")
+        console.print("[yellow]No tracks in library. Run 'digcrate scan' first.[/yellow]")
         raise typer.Exit(0)
 
     bpms = [t.bpm for t in tracks if t.bpm > 0]
@@ -132,7 +132,7 @@ def search(
     query: Optional[str] = typer.Option(None, "-q", help="Search artist/title"),
 ):
     """Search your track library."""
-    from deepcrate.db import search_tracks as db_search
+    from digcrate.db import search_tracks as db_search
 
     bpm_min, bpm_max = None, None
     if bpm:
@@ -180,13 +180,13 @@ def plan(
     duration: int = typer.Option(60, "--duration", "-d", help="Target duration in minutes"),
 ):
     """Plan a DJ set using AI."""
-    from deepcrate.planning.planner import plan_set
+    from digcrate.planning.planner import plan_set
 
     console.print(f"Planning set [bold]{name}[/bold]: {description}")
     result = plan_set(description, name, duration)
 
     if result:
-        console.print(f"\n[green]Set '{name}' created![/green] Use 'deepcrate show \"{name}\"' to view it.")
+        console.print(f"\n[green]Set '{name}' created![/green] Use 'digcrate show \"{name}\"' to view it.")
     else:
         console.print("[red]Failed to create set.[/red]")
         raise typer.Exit(1)
@@ -197,8 +197,8 @@ def show(
     name: str = typer.Argument(..., help="Name of the set to display"),
 ):
     """View a planned set with transition scores."""
-    from deepcrate.db import get_set_by_name, get_set_tracks, get_track_by_id
-    from deepcrate.planning.scoring import describe_transition
+    from digcrate.db import get_set_by_name, get_set_tracks, get_track_by_id
+    from digcrate.planning.scoring import describe_transition
 
     set_plan = get_set_by_name(name)
     if not set_plan or set_plan.id is None:
@@ -255,8 +255,8 @@ def gaps(
     name: str = typer.Argument(..., help="Name of the set to analyze"),
 ):
     """Show weak transitions and suggest what's missing."""
-    from deepcrate.db import get_set_by_name
-    from deepcrate.planning.gaps import analyze_gaps
+    from digcrate.db import get_set_by_name
+    from digcrate.planning.gaps import analyze_gaps
 
     set_plan = get_set_by_name(name)
     if not set_plan or set_plan.id is None:
@@ -284,14 +284,14 @@ def gaps(
 
 @app.command()
 def discover(
-    gap: int = typer.Option(..., "--gap", "-g", help="Gap number to fill (from 'deepcrate gaps')"),
+    gap: int = typer.Option(..., "--gap", "-g", help="Gap number to fill (from 'digcrate gaps')"),
     name: str = typer.Option(..., "--name", "-n", help="Set name to search gaps from"),
     genre: Optional[str] = typer.Option(None, help="Genre filter for Spotify search"),
     limit: int = typer.Option(10, help="Max results"),
 ):
     """Find tracks on Spotify to fill a gap in your set."""
-    from deepcrate.db import get_gaps, get_set_by_name
-    from deepcrate.discovery.spotify import search_tracks as spotify_search
+    from digcrate.db import get_gaps, get_set_by_name
+    from digcrate.discovery.spotify import search_tracks as spotify_search
 
     set_plan = get_set_by_name(name)
     if not set_plan or set_plan.id is None:
@@ -300,7 +300,7 @@ def discover(
 
     gap_list = get_gaps(set_plan.id)
     if not gap_list:
-        console.print("[yellow]No gaps found. Run 'deepcrate gaps' first.[/yellow]")
+        console.print("[yellow]No gaps found. Run 'digcrate gaps' first.[/yellow]")
         raise typer.Exit(0)
 
     if gap < 1 or gap > len(gap_list):
@@ -349,10 +349,10 @@ def export(
     fmt = format.lower()
 
     if fmt == "m3u":
-        from deepcrate.export.m3u import export_m3u
+        from digcrate.export.m3u import export_m3u
         path = export_m3u(name, output)
     elif fmt in ("rekordbox", "xml"):
-        from deepcrate.export.rekordbox import export_rekordbox
+        from digcrate.export.rekordbox import export_rekordbox
         path = export_rekordbox(name, output)
     else:
         console.print(f"[red]Error:[/red] Unknown format '{format}'. Use 'm3u' or 'rekordbox'.")

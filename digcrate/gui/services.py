@@ -1,4 +1,4 @@
-"""Service helpers that connect GUI actions to DeepCrate core logic."""
+"""Service helpers that connect GUI actions to DigCrate core logic."""
 
 from __future__ import annotations
 
@@ -6,10 +6,10 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Callable
 
-from deepcrate.analysis.analyzer import ANALYSIS_VERSION, analyze_track, file_hash
-from deepcrate.analysis.scanner import find_audio_files
-from deepcrate.config import get_settings
-from deepcrate.db import (
+from digcrate.analysis.analyzer import ANALYSIS_VERSION, analyze_track, file_hash
+from digcrate.analysis.scanner import find_audio_files
+from digcrate.config import get_settings
+from digcrate.db import (
     delete_tracks_by_ids,
     delete_track_override,
     get_all_sets,
@@ -24,13 +24,13 @@ from deepcrate.db import (
     upsert_track_override,
     upsert_track,
 )
-from deepcrate.discovery.spotify import search_tracks as spotify_search
-from deepcrate.export.m3u import export_m3u
-from deepcrate.export.rekordbox import export_rekordbox
-from deepcrate.models import Gap, SetPlan, SetTrack, Track, TransitionInfo
-from deepcrate.planning.gaps import analyze_gaps
-from deepcrate.planning.planner import plan_set
-from deepcrate.planning.scoring import describe_transition
+from digcrate.discovery.spotify import search_tracks as spotify_search
+from digcrate.export.m3u import export_m3u
+from digcrate.export.rekordbox import export_rekordbox
+from digcrate.models import Gap, SetPlan, SetTrack, Track, TransitionInfo
+from digcrate.planning.gaps import analyze_gaps
+from digcrate.planning.planner import plan_set
+from digcrate.planning.scoring import describe_transition
 
 
 def _parse_range(value: str | None, default_span: float) -> tuple[float | None, float | None]:
@@ -374,7 +374,7 @@ def load_preferences() -> dict[str, str]:
         "OPENAI_MODEL": "gpt-4o-mini",
         "SPOTIFY_CLIENT_ID": "",
         "SPOTIFY_CLIENT_SECRET": "",
-        "DATABASE_PATH": "data/deepcrate.sqlite",
+        "DATABASE_PATH": "data/digcrate.sqlite",
     }
 
     env_path = _env_file_path()

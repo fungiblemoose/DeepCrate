@@ -1,7 +1,7 @@
 """Tests for planner helper logic that does not call external APIs."""
 
-from deepcrate.models import Track
-from deepcrate.planning.planner import (
+from digcrate.models import Track
+from digcrate.planning.planner import (
     _bpm_matches_range,
     _infer_genre_profile,
     _infer_genre_profiles,

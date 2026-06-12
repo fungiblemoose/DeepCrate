@@ -1,4 +1,4 @@
-"""JSON bridge for DeepCrateMac Swift app."""
+"""JSON bridge for DigCrateMac Swift app."""
 
 from __future__ import annotations
 
@@ -43,21 +43,21 @@ def _track_payload(track) -> dict:
 
 
 def cmd_scan(args: argparse.Namespace) -> None:
-    from deepcrate.gui.services import scan_directory
+    from digcrate.gui.services import scan_directory
 
     result = scan_directory(args.directory)
     _ok(result)
 
 
 def cmd_reanalyze(args: argparse.Namespace) -> None:
-    from deepcrate.gui.services import reanalyze_track
+    from digcrate.gui.services import reanalyze_track
 
     track = reanalyze_track(args.track_id)
     _ok({"track": _track_payload(track)})
 
 
 def cmd_override_track(args: argparse.Namespace) -> None:
-    from deepcrate.gui.services import clear_track_override, save_track_override
+    from digcrate.gui.services import clear_track_override, save_track_override
 
     if args.clear:
         track = clear_track_override(args.track_id)
@@ -74,7 +74,7 @@ def cmd_override_track(args: argparse.Namespace) -> None:
 
 
 def cmd_tracks(args: argparse.Namespace) -> None:
-    from deepcrate.gui.services import search_library
+    from digcrate.gui.services import search_library
 
     tracks = search_library(args.bpm, args.key, args.energy, args.query, needs_review=args.needs_review)
 
@@ -86,7 +86,7 @@ def cmd_tracks(args: argparse.Namespace) -> None:
 
 
 def cmd_delete_tracks(args: argparse.Namespace) -> None:
-    from deepcrate.gui.services import delete_tracks
+    from digcrate.gui.services import delete_tracks
 
     try:
         raw_ids = json.loads(args.track_ids)
@@ -108,7 +108,7 @@ def cmd_delete_tracks(args: argparse.Namespace) -> None:
 
 
 def cmd_plan(args: argparse.Namespace) -> None:
-    from deepcrate.gui.services import create_set_plan
+    from digcrate.gui.services import create_set_plan
 
     captured_out = io.StringIO()
     captured_err = io.StringIO()
@@ -123,7 +123,7 @@ def cmd_plan(args: argparse.Namespace) -> None:
 
 
 def cmd_sets(_args: argparse.Namespace) -> None:
-    from deepcrate.gui.services import list_sets
+    from digcrate.gui.services import list_sets
 
     sets = list_sets()
     _ok(
@@ -143,7 +143,7 @@ def cmd_sets(_args: argparse.Namespace) -> None:
 
 
 def cmd_set_tracks(args: argparse.Namespace) -> None:
-    from deepcrate.gui.services import get_set_tracks_detailed
+    from digcrate.gui.services import get_set_tracks_detailed
 
     rows = get_set_tracks_detailed(args.name)
 
@@ -179,7 +179,7 @@ def cmd_set_tracks(args: argparse.Namespace) -> None:
 
 
 def cmd_gaps(args: argparse.Namespace) -> None:
-    from deepcrate.gui.services import analyze_set_gaps
+    from digcrate.gui.services import analyze_set_gaps
 
     weak, gaps = analyze_set_gaps(args.name)
     payload = []
@@ -200,7 +200,7 @@ def cmd_gaps(args: argparse.Namespace) -> None:
 
 
 def cmd_discover(args: argparse.Namespace) -> None:
-    from deepcrate.gui.services import discover_for_gap
+    from digcrate.gui.services import discover_for_gap
 
     try:
         rows = discover_for_gap(args.name, args.gap, args.genre, args.limit)
@@ -211,16 +211,16 @@ def cmd_discover(args: argparse.Namespace) -> None:
 
 
 def cmd_export(args: argparse.Namespace) -> None:
-    from deepcrate.gui.services import export_set
+    from digcrate.gui.services import export_set
 
     path = export_set(args.name, args.format, args.output)
     _ok({"path": path})
 
 
 def cmd_save_set(args: argparse.Namespace) -> None:
-    from deepcrate.db import create_set, delete_set, get_track_by_id, set_set_tracks
-    from deepcrate.models import SetPlan, SetTrack
-    from deepcrate.planning.scoring import transition_score
+    from digcrate.db import create_set, delete_set, get_track_by_id, set_set_tracks
+    from digcrate.models import SetPlan, SetTrack
+    from digcrate.planning.scoring import transition_score
 
     try:
         track_ids = [int(x) for x in json.loads(args.track_ids)]
@@ -260,7 +260,7 @@ def cmd_save_set(args: argparse.Namespace) -> None:
 
 
 def parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="DeepCrateMac bridge")
+    p = argparse.ArgumentParser(description="DigCrateMac bridge")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     scan = sub.add_parser("scan")
